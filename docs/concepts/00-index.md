@@ -6,26 +6,48 @@ here. The architecture docs (`../architecture.md`, `../package-specs/*.md`) buil
 top of this; if something in those docs conflicts with a concept explained here,
 this primer wins and the architecture doc should be corrected.
 
+**Status: complete.** All eight chapters are at tutorial depth — runnable-shape code
+per scenario, official OTel doc links, and an edge-case/grey-area checklist per
+chapter (except ch. 1, which is pure foundational concepts with no code of its own,
+and ch. 8, which is the synthesis chapter). Ready to push.
+
 ## Reading order
 
 1. [`01-fundamentals.md`](01-fundamentals.md) — the three signals (traces, metrics,
-   logs), Resource, Context, API vs SDK split, the Collector.
-2. [`02-otel-node.md`](02-otel-node.md) — NodeSDK, auto-instrumentation, Node's
-   context propagation model.
-3. [`03-otel-web.md`](03-otel-web.md) — WebTracerProvider, browser instrumentation,
-   browser context propagation, why the browser story differs from Node's.
-4. [`04-logging-integration.md`](04-logging-integration.md) — how OTel relates to
-   existing logger libraries (pino, winston, console) — bridge vs replace, and
-   trace/log correlation.
-5. [`05-processing-and-batching.md`](05-processing-and-batching.md) — SpanProcessors,
-   batch vs simple, exporter mechanics, backpressure.
+   logs), Resource, Context, API vs SDK split, sampling, manual vs auto
+   instrumentation, the Collector.
+2. [`02-otel-node.md`](02-otel-node.md) — NodeSDK bootstrap, what happens to
+   auto-instrumentation for libraries you don't use, version-compatibility grey
+   areas, custom/manual spans, inbound HTTP server spans, outbound HTTP/DB/Redis/AWS
+   client spans, message-queue producer/consumer context propagation, ESM
+   limitations, and a 13-item edge-case checklist.
+3. [`03-otel-web.md`](03-otel-web.md) — WebTracerProvider bootstrap, why the browser
+   has no lazy auto-instrumentation the way Node does, Zone vs Stack context
+   managers with concrete failure examples, CORS trace-header propagation and what
+   breaks if it's misconfigured either direction, web-vitals/console bridges,
+   exporter security posture and payload budget, and a 10-item edge-case checklist.
+4. [`04-logging-integration.md`](04-logging-integration.md) — the three
+   logger-integration patterns (correlation-only / Logs Bridge / full replacement)
+   with working pino/winston/OTel-Logs-API code for each, severity mapping, and an
+   edge-case checklist.
+5. [`05-processing-and-batching.md`](05-processing-and-batching.md) — Simple vs
+   Batch processors in code, what queue overflow and export retry/failure actually
+   look like, multiple processors on one provider, MetricReader, shutdown/flush
+   semantics, and an edge-case checklist.
 6. [`06-performance-and-optimization.md`](06-performance-and-optimization.md) —
-   where overhead comes from and the levers to control it (sampling, batching,
-   cardinality, resource detection cost).
-7. [`07-generic-reusable-design.md`](07-generic-reusable-design.md) — patterns that
-   make an OTel wrapper reusable across services instead of copy-pasted boilerplate.
-8. [`08-why-this-layer.md`](08-why-this-layer.md) — synthesis: given 1–7, what
-   concretely is worth wrapping, and what should stay a thin pass-through to raw OTel.
+   sampler config in code (including the `ParentBased` mistake to avoid), tail
+   sampling and where it actually lives (the Collector, not the SDK), a concrete
+   cardinality mistake-and-fix, attribute/span limits, resource-detector cost, and
+   an edge-case checklist.
+7. [`07-generic-reusable-design.md`](07-generic-reusable-design.md) — a concrete
+   two-service copy-paste-drift failure example and the config-driven fix, escape
+   hatches, environment-agnostic-core enforcement, testability before/after code,
+   versioning-blast-radius example, and an edge-case checklist.
+8. [`08-why-this-layer.md`](08-why-this-layer.md) — synthesis: given ch. 1–7, what
+   concretely is worth wrapping, an explicit concept→package mapping table, and 8
+   open questions for Phase 1 sign-off (3 carried over, 5 new — surfaced by the
+   deep-dive into instrumentation, PII risk in DB/Redis attributes, Redis pub/sub,
+   message-queue context scoping, and ESM support).
 
 ## Ground rules for this primer
 
@@ -37,3 +59,7 @@ this primer wins and the architecture doc should be corrected.
 - Version context: JS SDK packages referenced here track the `1.x` (traces, stable)
   and `0.5x` (metrics/logs, still pre-1.0 as of writing) lines used in
   [`../architecture.md`](../architecture.md)'s peer-dependency table.
+- Code samples throughout are illustrative snippets (key API calls, not full
+  copy-pasteable boilerplate with every import/config value) — verify exact imports/
+  option names against the linked official docs before using them in Phase 2
+  implementation, since OTel JS package APIs do shift between versions.
