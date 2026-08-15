@@ -9,6 +9,16 @@ components. It depends on `otel-web` (for the active `WebTracerProvider`) and ne
 on `otel-node`. This package is explicitly a stretch goal — build only after
 `otel-core` and `otel-web` are stable (see [`docs/implementation-plan.md`](../implementation-plan.md) M4).
 
+**Design rationale lives in [`../concepts/09-otel-web-in-react.md`](../concepts/09-otel-web-in-react.md)**
+— every export below (`useSpan`'s `useRef`-based lifecycle, `withRouteChangeSpans`'s
+adapter shape, `OtelErrorBoundary`'s conditional span-end) traces back to a specific
+React-rendering-model gotcha documented there (StrictMode double-invocation,
+concurrent-rendering render-body re-invocation, what error boundaries don't catch).
+That chapter also flags SSR/hydration trace-context bridging as unaddressed by the
+current export list below — see open question #9 in
+[`../concepts/08-why-this-layer.md`](../concepts/08-why-this-layer.md) §8.6 before
+this package's scope is finalized.
+
 ## Public exports
 
 ```ts

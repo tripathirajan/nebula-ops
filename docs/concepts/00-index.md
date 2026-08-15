@@ -6,7 +6,7 @@ here. The architecture docs (`../architecture.md`, `../package-specs/*.md`) buil
 top of this; if something in those docs conflicts with a concept explained here,
 this primer wins and the architecture doc should be corrected.
 
-**Status: complete.** All eight chapters are at tutorial depth — runnable-shape code
+**Status: complete.** All nine chapters are at tutorial depth — runnable-shape code
 per scenario, official OTel doc links, and an edge-case/grey-area checklist per
 chapter (except ch. 1, which is pure foundational concepts with no code of its own,
 and ch. 8, which is the synthesis chapter). Ready to push.
@@ -44,10 +44,20 @@ and ch. 8, which is the synthesis chapter). Ready to push.
    hatches, environment-agnostic-core enforcement, testability before/after code,
    versioning-blast-radius example, and an edge-case checklist.
 8. [`08-why-this-layer.md`](08-why-this-layer.md) — synthesis: given ch. 1–7, what
-   concretely is worth wrapping, an explicit concept→package mapping table, and 8
-   open questions for Phase 1 sign-off (3 carried over, 5 new — surfaced by the
+   concretely is worth wrapping, an explicit concept→package mapping table, and 9
+   open questions for Phase 1 sign-off (3 carried over, 6 new — surfaced by the
    deep-dive into instrumentation, PII risk in DB/Redis attributes, Redis pub/sub,
-   message-queue context scoping, and ESM support).
+   message-queue context scoping, ESM support, and — from ch. 9 — SSR/hydration
+   trace-context bridging).
+9. [`09-otel-web-in-react.md`](09-otel-web-in-react.md) — using `otel-web`'s
+   `WebTracerProvider`/instrumentation foundations inside a React app specifically:
+   bootstrap-before-render ordering, the `StrictMode` double-span gotcha, a
+   component-scoped `useSpan` pattern and why it's `useRef`-based rather than
+   `useMemo`-based, router-agnostic route-change spans, error boundaries → span
+   events (and what they don't catch), React 18 concurrent rendering as a genuinely
+   open correctness question for context propagation, SSR/hydration trace-context
+   bridging via Links, and testing with `@testing-library/react`. Directly informs
+   [`../package-specs/otel-react.md`](../package-specs/otel-react.md)'s API surface.
 
 ## Ground rules for this primer
 
