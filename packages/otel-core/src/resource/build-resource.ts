@@ -1,0 +1,34 @@
+import { Resource } from '@opentelemetry/resources';
+import type { NebulaOtelConfig } from '../config/schema.js';
+import { NebulaAttributes } from '../attributes/nebula-attributes.js';
+import { OTEL_CORE_VERSION } from '../version.js';
+
+/**
+ * Maps a resolved `NebulaOtelConfig` to an OpenTelemetry `Resource`, using
+ * `NebulaAttributes`' semantic-convention-backed keys. `config.resourceAttributes`
+ * (explicit, user-supplied) takes precedence over the values this function derives
+ * from `serviceName`/`serviceVersion`/`environment` — see docs/architecture.md §3's
+ * precedence table, which puts explicit config above everything else. It never
+ * takes precedence over nothing, though: `otel-node`/`otel-web` layer their own
+ * environment/host resource detectors *underneath* this (merged via `Resource#merge`
+ * on the caller's side), since detector-derived attributes aren't config the way
+ * `resourceAttributes` is.
+ */
+export function buildResource(config: NebulaOtelConfig): Resource {
+  const derived: Record<string, string | number | boolean> = {
+    [NebulaAttributes.SERVICE_NAME]: config.serviceName,
+    [NebulaAttributes.NEBULA_PACKAGE_VERSION]: OTEL_CORE_VERSION,
+  };
+
+  if (config.serviceVersion !== undefined) {
+    derived[NebulaAttributes.SERVICE_VERSION] = config.serviceVersion;
+  }
+  if (config.environment !== undefined) {
+    derived[NebulaAttributes.DEPLOYMENT_ENVIRONMENT] = config.environment;
+  }
+
+  // Explicit resourceAttributes win over the derived values above (e.g. a caller
+  // can override service.name's resource attribute independently of serviceName,
+  // though that's an unusual thing to want — the precedence still holds either way).
+  return new Resource({ ...derived, ...config.resourceAttributes });
+}
