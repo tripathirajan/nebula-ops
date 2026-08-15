@@ -15,6 +15,7 @@ Complexity key: **S** = well under a day of focused work, **M** = roughly a day,
 **Goal:** empty-but-wired monorepo shell exists; tooling runs green on nothing.
 
 **Acceptance criteria:**
+
 - `pnpm install` succeeds at the repo root.
 - `pnpm turbo run build lint typecheck test` succeeds (trivially, with zero packages
   or with placeholder packages producing no output) with no errors.
@@ -23,6 +24,7 @@ Complexity key: **S** = well under a day of focused work, **M** = roughly a day,
 - Directory tree matches [`docs/repo-scaffold.md`](repo-scaffold.md) §1.
 
 **Files touched:**
+
 - `pnpm-workspace.yaml`, `turbo.json`, root `package.json`, `tsconfig.base.json`,
   `.npmrc`, `.gitignore`, `README.md`
 - `.changeset/config.json`
@@ -44,6 +46,7 @@ package code.
 constraint verified in CI.
 
 **Acceptance criteria:**
+
 - All exports in the package spec exist with matching signatures.
 - Unit tests cover: config resolution precedence (overrides > source > defaults),
   `validateConfig` error paths, `buildResource` attribute merging, `runWithLogContext`/
@@ -55,6 +58,7 @@ constraint verified in CI.
 - A changeset is added for `otel-core`'s initial `0.1.0` release.
 
 **Files touched:**
+
 - `packages/otel-core/**` (full package per [`docs/repo-scaffold.md`](repo-scaffold.md) §1)
 - `.changeset/*.md` (new changeset file)
 - Possibly: shared ESLint config additions at repo root for the import-restriction rule.
@@ -74,6 +78,7 @@ signatures, not just the spec) before starting `otel-node`/`otel-web`.
 `otel-core`.
 
 **Acceptance criteria:**
+
 - All exports in the package spec exist with matching signatures.
 - `startNodeSdk`/`shutdownNodeSdk`/`registerShutdownHandlers` verified against an
   in-process OTLP-compatible test collector or upstream in-memory exporters (final
@@ -88,6 +93,7 @@ signatures, not just the spec) before starting `otel-node`/`otel-web`.
 - A changeset is added for `otel-node`'s initial `0.1.0` release.
 
 **Files touched:**
+
 - `packages/otel-node/**`
 - `.changeset/*.md`
 
@@ -110,6 +116,7 @@ traced call, and shows a log line with matching trace id, before moving to `otel
 `otel-core`.
 
 **Acceptance criteria:**
+
 - All exports in the package spec exist with matching signatures.
 - `initWebTracer`/`shutdownWebTracer` verified in a browser-like test environment
   (jsdom or a real headless browser via the project's test runner) with fetch/XHR
@@ -123,6 +130,7 @@ traced call, and shows a log line with matching trace id, before moving to `otel
 - A changeset is added for `otel-web`'s initial `0.1.0` release.
 
 **Files touched:**
+
 - `packages/otel-web/**`
 - `.changeset/*.md`
 
@@ -141,6 +149,7 @@ the optional M4 packages or skip to M5 examples.
 there's appetite to continue.
 
 **Acceptance criteria (`otel-react`):**
+
 - All exports in [`docs/package-specs/otel-react.md`](package-specs/otel-react.md)
   exist with matching signatures.
 - `useSpan` verified not to leak spans across re-renders/unmounts in a React Testing
@@ -151,6 +160,7 @@ there's appetite to continue.
 - A changeset is added for `otel-react`'s initial `0.1.0` release.
 
 **Acceptance criteria (`otel-testing`):**
+
 - All exports in [`docs/package-specs/otel-testing.md`](package-specs/otel-testing.md)
   exist with matching signatures.
 - `expectSpan`/`expectLogRecord` verified against both a passing and a deliberately
@@ -163,6 +173,7 @@ there's appetite to continue.
   as a small follow-up changeset.
 
 **Files touched:**
+
 - `packages/otel-react/**`, `packages/otel-testing/**`
 - `.changeset/*.md` (one per package)
 
@@ -180,6 +191,7 @@ and check in again after each of the two sub-deliverables since they're independ
 and leave the repo in a state a new contributor or consumer can onboard from.
 
 **Acceptance criteria:**
+
 - `examples/node-app`: minimal Express (or plain `http`) service using `otel-node`,
   emitting real traces/logs to a local OTLP collector (e.g. via `docker-compose` with
   the OpenTelemetry Collector + a viewer like Jaeger), README with run instructions.
@@ -196,6 +208,7 @@ and leave the repo in a state a new contributor or consumer can onboard from.
   so docs match code exactly.
 
 **Files touched:**
+
 - `examples/node-app/**`, `examples/web-app/**`
 - `README.md`
 - Possibly minor edits to `docs/*` to reconcile any approved deviations

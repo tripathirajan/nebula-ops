@@ -98,7 +98,7 @@ change is considered done — see the coverage bar below.
   not to widen the existing module's responsibility silently.
 - Prettier + ESLint (flat config, root-level, per-package overrides only for the
   `otel-core` import-restriction rule) format/lint everything; run `pnpm turbo run
-  lint` before considering a change done, don't rely on editor integration alone.
+lint` before considering a change done, don't rely on editor integration alone.
 
 ## Where things live
 

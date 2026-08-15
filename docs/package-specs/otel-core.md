@@ -7,7 +7,7 @@
 rules, resource/attribute conventions layered on top of OpenTelemetry semantic
 conventions, config validation, and log-context correlation primitives built on the
 standard OTel `context` API. It contains no Node-only or browser-only code — it
-defines the *shape* of context propagation and configuration; `otel-node` and
+defines the _shape_ of context propagation and configuration; `otel-node` and
 `otel-web` each supply the environment-specific `ContextManager` and env-var/build-time
 value gathering that plug into it. Every other package in the monorepo depends on
 `otel-core`; it depends on nothing else in the monorepo.
@@ -34,7 +34,7 @@ export interface ConfigSource {
 
 export function resolveConfig(
   overrides?: Partial<NebulaOtelConfig>,
-  source?: ConfigSource
+  source?: ConfigSource,
 ): NebulaOtelConfig;
 
 export function validateConfig(config: unknown): NebulaOtelConfig; // throws NebulaConfigError
@@ -63,7 +63,7 @@ export interface LogContext {
 export function getActiveLogContext(): LogContext;
 export function runWithLogContext<T>(context: LogContext, fn: () => T): T;
 export function bindLogContext<Args extends unknown[], R>(
-  fn: (...args: Args) => R
+  fn: (...args: Args) => R,
 ): (...args: Args) => R;
 
 // Formats the active OTel span context (if any) into a LogContext — used by
@@ -76,25 +76,25 @@ export const OTEL_CORE_VERSION: string;
 
 ## Internal modules
 
-| Module | Responsibility |
-|---|---|
-| `src/config/resolve.ts` | Merge precedence: explicit overrides > `ConfigSource` values > defaults. Pure function, no I/O. |
-| `src/config/schema.ts` | Runtime validation schema (e.g. zod) backing `validateConfig`; single source of truth for required/optional fields and types. |
-| `src/config/errors.ts` | `NebulaConfigError` and issue formatting. |
-| `src/resource/build-resource.ts` | Maps `NebulaOtelConfig` → `@opentelemetry/resources` `Resource`, merging `resourceAttributes` with `NebulaAttributes`-derived values. |
-| `src/attributes/nebula-attributes.ts` | Constants layered on `@opentelemetry/semantic-conventions`. |
-| `src/context/log-context.ts` | `LogContext` type, `getActiveLogContext`/`runWithLogContext`/`bindLogContext`, implemented purely against `@opentelemetry/api`'s `context`/`trace` APIs (no `ContextManager` installation — that's the environment package's job). |
-| `src/context/from-span.ts` | `logContextFromActiveSpan` — reads `trace.getSpan(context.active())` and formats ids/flags. |
-| `src/index.ts` | Public export barrel — the frozen surface above, nothing else. |
+| Module                                | Responsibility                                                                                                                                                                                                                     |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/config/resolve.ts`               | Merge precedence: explicit overrides > `ConfigSource` values > defaults. Pure function, no I/O.                                                                                                                                    |
+| `src/config/schema.ts`                | Runtime validation schema (e.g. zod) backing `validateConfig`; single source of truth for required/optional fields and types.                                                                                                      |
+| `src/config/errors.ts`                | `NebulaConfigError` and issue formatting.                                                                                                                                                                                          |
+| `src/resource/build-resource.ts`      | Maps `NebulaOtelConfig` → `@opentelemetry/resources` `Resource`, merging `resourceAttributes` with `NebulaAttributes`-derived values.                                                                                              |
+| `src/attributes/nebula-attributes.ts` | Constants layered on `@opentelemetry/semantic-conventions`.                                                                                                                                                                        |
+| `src/context/log-context.ts`          | `LogContext` type, `getActiveLogContext`/`runWithLogContext`/`bindLogContext`, implemented purely against `@opentelemetry/api`'s `context`/`trace` APIs (no `ContextManager` installation — that's the environment package's job). |
+| `src/context/from-span.ts`            | `logContextFromActiveSpan` — reads `trace.getSpan(context.active())` and formats ids/flags.                                                                                                                                        |
+| `src/index.ts`                        | Public export barrel — the frozen surface above, nothing else.                                                                                                                                                                     |
 
 ## External dependencies
 
-| Package | Version range | Kind |
-|---|---|---|
-| `@opentelemetry/api` | `^1.9.0` | `peerDependency` (+ matching `devDependency` for local build) |
-| `@opentelemetry/resources` | `~1.26.0` | `dependency` |
-| `@opentelemetry/semantic-conventions` | `~1.27.0` | `dependency` |
-| `zod` | `^3.23.0` | `dependency` (config schema validation) |
+| Package                               | Version range | Kind                                                          |
+| ------------------------------------- | ------------- | ------------------------------------------------------------- |
+| `@opentelemetry/api`                  | `^1.9.0`      | `peerDependency` (+ matching `devDependency` for local build) |
+| `@opentelemetry/resources`            | `~1.26.0`     | `dependency`                                                  |
+| `@opentelemetry/semantic-conventions` | `~1.27.0`     | `dependency`                                                  |
+| `zod`                                 | `^3.23.0`     | `dependency` (config schema validation)                       |
 
 No Node builtins, no DOM/browser globals, no bundler-specific imports.
 

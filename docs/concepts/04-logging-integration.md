@@ -5,13 +5,13 @@
 Teams almost always already have a logger (pino, winston, bunyan, or `console` in the
 browser) with established call sites (`logger.info(...)`) throughout the codebase.
 Adopting OTel for logs does **not** mean ripping that out. The question is how OTel
-*relates* to that existing logger — there are three distinct patterns, with different
+_relates_ to that existing logger — there are three distinct patterns, with different
 trade-offs:
 
 ### Pattern A — Correlation only (no OTel Logs pipeline at all)
 
 The existing logger keeps writing exactly as before, to exactly the same destination
-(stdout, a file, a browser console) it always did. The *only* change is: every log
+(stdout, a file, a browser console) it always did. The _only_ change is: every log
 line gets `trace_id`/`span_id` fields injected, sourced from whatever span is active
 at the moment the log call happens. No `LoggerProvider`, no `LogRecordExporter`, no
 OTel Logs SDK involved at all — this is pure "read the active span's context and
@@ -20,7 +20,7 @@ stick it into the log's structured fields." Code: §4.5–§4.7.
 ### Pattern B — Logs Bridge API (dual pipeline)
 
 The existing logger still exists and still writes to its normal destination, **but**
-an appender/transport is added that *also* forwards each log record into the OTel
+an appender/transport is added that _also_ forwards each log record into the OTel
 Logs pipeline (`LoggerProvider` → `LogRecordProcessor` → `LogRecordExporter` →
 your OTel backend), in addition to (not instead of) the original output. This is
 what "Logs Bridge API" formally refers to in the OTel spec — most languages'
@@ -39,22 +39,22 @@ highest migration cost, most exposure to the Logs SDK's relative immaturity. Cod
 
 ## 4.2 Which pattern fits which situation
 
-| Situation | Likely fit |
-|---|---|
-| Established service, existing pino/winston pipeline already shipping logs somewhere that works | **A** — add correlation, change nothing else, near-zero risk |
-| Team wants trace/log correlation *and* a single OTel-native backend for both, willing to run/tune a second export path | **B** |
-| Greenfield service, or infra code with no existing logger dependency | **C**, or A if there's still a preferred existing logger for humans reading raw output |
-| Browser | Almost always **A** (console bridge) — a full OTel Logs pipeline from the browser adds another public-reachable exporter endpoint and payload-size cost (ch. 3 §3.10) for a signal that's usually lower-value client-side than traces/vitals |
+| Situation                                                                                                              | Likely fit                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Established service, existing pino/winston pipeline already shipping logs somewhere that works                         | **A** — add correlation, change nothing else, near-zero risk                                                                                                                                                                                 |
+| Team wants trace/log correlation _and_ a single OTel-native backend for both, willing to run/tune a second export path | **B**                                                                                                                                                                                                                                        |
+| Greenfield service, or infra code with no existing logger dependency                                                   | **C**, or A if there's still a preferred existing logger for humans reading raw output                                                                                                                                                       |
+| Browser                                                                                                                | Almost always **A** (console bridge) — a full OTel Logs pipeline from the browser adds another public-reachable exporter endpoint and payload-size cost (ch. 3 §3.10) for a signal that's usually lower-value client-side than traces/vitals |
 
 ## 4.3 Why correlation is the part that actually matters most
 
 The single highest-value outcome of "OTel + logging" for most teams isn't moving log
-*storage* to OTel — it's making trace ID a **join key** between two systems that
+_storage_ to OTel — it's making trace ID a **join key** between two systems that
 otherwise have no relationship: "this request was slow (seen in the trace backend) —
 what did the application actually log while handling it (seen in the log backend)?"
 That join only requires Pattern A's `trace_id`/`span_id` field injection to exist.
-Everything past that (full bridge, full replacement) is about *where logs live and
-how they're queried*, not about correlation, which is why Pattern A is usually the
+Everything past that (full bridge, full replacement) is about _where logs live and
+how they're queried_, not about correlation, which is why Pattern A is usually the
 right default and B/C are opt-in upgrades for teams who specifically want a unified
 backend.
 
@@ -71,6 +71,7 @@ pattern) will correlate to no span, not the wrong one; it fails safe/empty rathe
 than silently wrong.
 
 **Official references used in the code sections below:**
+
 - Logs concepts: https://opentelemetry.io/docs/concepts/signals/logs/
 - JS Logs Bridge API: https://opentelemetry.io/docs/languages/js/instrumentation/#logs
 - `@opentelemetry/instrumentation-pino`: https://github.com/open-telemetry/opentelemetry-js-contrib/tree/main/plugins/node/opentelemetry-instrumentation-pino
@@ -145,7 +146,7 @@ equivalent of pino's `mixin`/winston's `format` extension seam.
 
 ## 4.8 Pattern B — Logs Bridge, with the official `instrumentation-pino` package
 
-Rather than hand-writing the mixin from §4.5 *and* separately standing up an OTel
+Rather than hand-writing the mixin from §4.5 _and_ separately standing up an OTel
 Logs export pipeline, `@opentelemetry/instrumentation-pino` does both by patching
 pino itself to also forward every log record into the OTel Logs SDK:
 
@@ -159,7 +160,9 @@ import { logs } from '@opentelemetry/api-logs';
 
 const loggerProvider = new LoggerProvider();
 loggerProvider.addLogRecordProcessor(
-  new BatchLogRecordProcessor(new OTLPLogExporter({ url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT }))
+  new BatchLogRecordProcessor(
+    new OTLPLogExporter({ url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT }),
+  ),
 );
 logs.setGlobalLoggerProvider(loggerProvider);
 
@@ -230,13 +233,13 @@ OTel's `SeverityNumber` bands don't share the same scale, so a bridge/correlatio
 layer needs an explicit table rather than a formula:
 
 | pino level | pino numeric value | OTel `SeverityNumber` | OTel band |
-|---|---|---|---|
-| `trace` | 10 | 1 (`TRACE`) | TRACE |
-| `debug` | 20 | 5 (`DEBUG`) | DEBUG |
-| `info` | 30 | 9 (`INFO`) | INFO |
-| `warn` | 40 | 13 (`WARN`) | WARN |
-| `error` | 50 | 17 (`ERROR`) | ERROR |
-| `fatal` | 60 | 21 (`FATAL`) | FATAL |
+| ---------- | ------------------ | --------------------- | --------- |
+| `trace`    | 10                 | 1 (`TRACE`)           | TRACE     |
+| `debug`    | 20                 | 5 (`DEBUG`)           | DEBUG     |
+| `info`     | 30                 | 9 (`INFO`)            | INFO      |
+| `warn`     | 40                 | 13 (`WARN`)           | WARN      |
+| `error`    | 50                 | 17 (`ERROR`)          | ERROR     |
+| `fatal`    | 60                 | 21 (`FATAL`)          | FATAL     |
 
 `@opentelemetry/instrumentation-pino` (Pattern B, §4.8) handles this mapping
 internally — it's only something to hand-build if implementing Pattern A's
@@ -246,11 +249,11 @@ idea).
 
 ## 4.11 Edge cases and grey areas checklist
 
-| # | Scenario | What actually happens | Reference |
-|---|---|---|---|
-| 1 | Log call happens with no active span (e.g. at process startup, before any request) | `trace.getSpan(context.active())` returns `undefined` — correlation fields are simply omitted, not set to empty/null values; this is correct, fail-safe behavior, not a bug | §4.4 |
-| 2 | `winston.format` ordering has the trace-context format *after* `json()` | Trace fields never make it into the serialized output — format chain order is load-bearing, not cosmetic | §4.6 |
-| 3 | Pattern B (`instrumentation-pino`) enabled, but pino was already `require`'d before the SDK's `--require` preload finished | Same ordering hazard as ch. 2 §2.1/§2.8 — the patch may not apply; pino keeps working normally but without OTel forwarding, silently | ch. 2 §2.1 |
-| 4 | High log-volume service on Pattern B | Both the original transport (e.g. stdout → log shipper) and the new `BatchLogRecordProcessor` pipeline carry full volume — doubled downstream load, and the newer Logs SDK's behavior under sustained high volume is less field-proven than tracing's | §4.8 |
-| 5 | Team wants "always keep logs for a trace that had an error," analogous to tail-based trace sampling | No equivalent standard mechanism for logs at the SDK level (ch. 1 §1.6) — this is a backend/Collector-side capability question, not something Pattern A/B configuration alone provides | ch. 1 §1.6, §4.10 |
-| 6 | Migrating an existing large codebase's log call sites from pino to Pattern C | Not a mechanical find-replace — `logger.info({fields}, 'msg')` and `otelLogger.emit({body, attributes, severityNumber})` are different shapes; full replacement is a real per-call-site rewrite, which is exactly why Pattern C is scoped to greenfield/infra code, not general migration | §4.9 |
+| #   | Scenario                                                                                                                   | What actually happens                                                                                                                                                                                                                                                                     | Reference         |
+| --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| 1   | Log call happens with no active span (e.g. at process startup, before any request)                                         | `trace.getSpan(context.active())` returns `undefined` — correlation fields are simply omitted, not set to empty/null values; this is correct, fail-safe behavior, not a bug                                                                                                               | §4.4              |
+| 2   | `winston.format` ordering has the trace-context format _after_ `json()`                                                    | Trace fields never make it into the serialized output — format chain order is load-bearing, not cosmetic                                                                                                                                                                                  | §4.6              |
+| 3   | Pattern B (`instrumentation-pino`) enabled, but pino was already `require`'d before the SDK's `--require` preload finished | Same ordering hazard as ch. 2 §2.1/§2.8 — the patch may not apply; pino keeps working normally but without OTel forwarding, silently                                                                                                                                                      | ch. 2 §2.1        |
+| 4   | High log-volume service on Pattern B                                                                                       | Both the original transport (e.g. stdout → log shipper) and the new `BatchLogRecordProcessor` pipeline carry full volume — doubled downstream load, and the newer Logs SDK's behavior under sustained high volume is less field-proven than tracing's                                     | §4.8              |
+| 5   | Team wants "always keep logs for a trace that had an error," analogous to tail-based trace sampling                        | No equivalent standard mechanism for logs at the SDK level (ch. 1 §1.6) — this is a backend/Collector-side capability question, not something Pattern A/B configuration alone provides                                                                                                    | ch. 1 §1.6, §4.10 |
+| 6   | Migrating an existing large codebase's log call sites from pino to Pattern C                                               | Not a mechanical find-replace — `logger.info({fields}, 'msg')` and `otelLogger.emit({body, attributes, severityNumber})` are different shapes; full replacement is a real per-call-site rewrite, which is exactly why Pattern C is scoped to greenfield/infra code, not general migration | §4.9              |

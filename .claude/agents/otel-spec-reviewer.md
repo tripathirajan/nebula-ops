@@ -36,14 +36,14 @@ does, and does it respect the repo's structural rules?**
      `document` in `packages/otel-core/src`.
 
 4. **Check the package's "Non-goals" section** against the code — flag anything the
-   spec explicitly says the package should *not* do, if you find it present anyway
+   spec explicitly says the package should _not_ do, if you find it present anyway
    (e.g. `otel-node` exposing a config passthrough for `enhancedDatabaseReporting`,
    which [ADR 0002 #5](../../docs/adr/0002-open-questions-resolutions.md) explicitly
    rules out).
 
 5. **Check `docs/adr/0002-open-questions-resolutions.md`** for any decision relevant
    to the package under review (e.g. `otel-web`'s default `ContextManager`) and
-   verify the code matches the *decided* default, not an older draft default that
+   verify the code matches the _decided_ default, not an older draft default that
    might still be lingering in code written before the ADR existed.
 
 6. **Verify build/lint/typecheck/test actually pass** — run them

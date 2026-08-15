@@ -42,9 +42,9 @@ which tools are worth their overhead.
 
 ### Repo topology: monorepo vs. separate repos per package
 
-| Option | Notes |
-|---|---|
-| **Monorepo (chosen)** | One source of truth for the shared `otel-core` config schema/API surface; atomic cross-package PRs when `otel-core`'s public API changes and `otel-node`/`otel-web` need to adapt in lockstep; single CI/lint/TS-config setup. |
+| Option                     | Notes                                                                                                                                                                                                                                                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Monorepo (chosen)**      | One source of truth for the shared `otel-core` config schema/API surface; atomic cross-package PRs when `otel-core`'s public API changes and `otel-node`/`otel-web` need to adapt in lockstep; single CI/lint/TS-config setup.                                                                                          |
 | Separate repos per package | Would require publishing `otel-core` and consuming it via a registry dependency even during same-day development across packages, adding release-and-bump friction for every coordinated change. Better isolation and independent CI, but not worth it at this package count and with this much inter-package coupling. |
 
 **Chosen: monorepo.** The packages are tightly coupled by design (shared config
@@ -54,12 +54,12 @@ graph builds before merge.
 
 ### Workspace/package manager: pnpm workspaces vs Nx vs Lerna vs separate repos
 
-| Option | Notes |
-|---|---|
-| **pnpm workspaces (chosen)** | Native workspace protocol (`workspace:*`), strict node_modules (catches phantom/undeclared dependencies — important for enforcing "otel-core has zero Node/browser-only imports"), fast installs, content-addressable store. No extra tool needed just to link local packages. |
-| Nx | Full-featured monorepo tool with its own task graph, generators, and plugin ecosystem. Powerful, but brings a generator/plugin mental model, an `nx.json` project-graph layer, and a steeper onboarding cost that isn't justified for 5 packages with a simple, mostly-linear dependency chain. Explicitly excluded by project requirements. |
-| Lerna | Historically the standard for JS monorepo versioning + publishing. Now largely superseded — modern Lerna itself delegates task running to Nx under the hood, and Changesets covers the versioning/changelog job we actually need. Adds a second tool doing what Changesets + pnpm already do. |
-| Separate repos (no workspace tool) | See topology discussion above — rejected for tightness of coupling. |
+| Option                             | Notes                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **pnpm workspaces (chosen)**       | Native workspace protocol (`workspace:*`), strict node_modules (catches phantom/undeclared dependencies — important for enforcing "otel-core has zero Node/browser-only imports"), fast installs, content-addressable store. No extra tool needed just to link local packages.                                                               |
+| Nx                                 | Full-featured monorepo tool with its own task graph, generators, and plugin ecosystem. Powerful, but brings a generator/plugin mental model, an `nx.json` project-graph layer, and a steeper onboarding cost that isn't justified for 5 packages with a simple, mostly-linear dependency chain. Explicitly excluded by project requirements. |
+| Lerna                              | Historically the standard for JS monorepo versioning + publishing. Now largely superseded — modern Lerna itself delegates task running to Nx under the hood, and Changesets covers the versioning/changelog job we actually need. Adds a second tool doing what Changesets + pnpm already do.                                                |
+| Separate repos (no workspace tool) | See topology discussion above — rejected for tightness of coupling.                                                                                                                                                                                                                                                                          |
 
 **Chosen: pnpm workspaces.** It's the minimal tool that solves local linking,
 dependency hygiene, and install performance, without imposing a generator/plugin
@@ -67,11 +67,11 @@ framework the project doesn't need.
 
 ### Task orchestration: Turborepo vs plain topological npm scripts
 
-| Option | Notes |
-|---|---|
-| **Turborepo (chosen)** | Declarative task graph (`turbo.json`) with automatic topological ordering (`^build` = "build my dependencies first"), local + remote caching so unchanged packages skip re-running `build`/`lint`/`test`, and simple config surface (single JSON file, no plugin system). Pairs naturally with pnpm workspaces. |
-| Plain topological scripts (e.g. hand-written `pnpm -r --filter` scripts, or `wireit`) | Avoids adding a dependency, but we'd hand-roll caching and dependency-aware ordering ourselves, or go without caching entirely — meaningful once CI runs `build`+`lint`+`test` on every PR across 5 packages. Not worth reinventing. |
-| Nx task graph | Same capability as Turborepo (topological task graph + caching) but bundled with the rest of Nx's opinionated framework, which we've already excluded. |
+| Option                                                                                | Notes                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Turborepo (chosen)**                                                                | Declarative task graph (`turbo.json`) with automatic topological ordering (`^build` = "build my dependencies first"), local + remote caching so unchanged packages skip re-running `build`/`lint`/`test`, and simple config surface (single JSON file, no plugin system). Pairs naturally with pnpm workspaces. |
+| Plain topological scripts (e.g. hand-written `pnpm -r --filter` scripts, or `wireit`) | Avoids adding a dependency, but we'd hand-roll caching and dependency-aware ordering ourselves, or go without caching entirely — meaningful once CI runs `build`+`lint`+`test` on every PR across 5 packages. Not worth reinventing.                                                                            |
+| Nx task graph                                                                         | Same capability as Turborepo (topological task graph + caching) but bundled with the rest of Nx's opinionated framework, which we've already excluded.                                                                                                                                                          |
 
 **Chosen: Turborepo.** It gives us caching and correct dependency ordering
 (`build` depends on `^build`, etc.) with a small, focused config file and no
@@ -79,11 +79,11 @@ generator/plugin system to learn.
 
 ### Versioning/release: Changesets vs lockstep versioning
 
-| Option | Notes |
-|---|---|
-| **Changesets, independent versioning (chosen)** | Each package gets its own semver line and CHANGELOG, bumped only when it actually changes. Contributors add a changeset (`pnpm changeset`) alongside their PR describing the change and bump type; a release PR batches and publishes. Matches the fact that `otel-web`/`otel-react` will likely iterate faster than the more stable `otel-core`. |
-| Lockstep versioning (all packages share one version number) | Simpler mental model ("everything is v1.4.0"), but forces a version (and changelog noise) bump on `otel-web` even when only `otel-node` changed, and misrepresents compatibility — consumers would reasonably assume a lockstep bump means something changed everywhere. |
-| Manual versioning / hand-written CHANGELOGs | No tooling dependency, but error-prone (forgotten bumps, inconsistent changelog format) and doesn't scale as more contributors touch the repo. |
+| Option                                                      | Notes                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Changesets, independent versioning (chosen)**             | Each package gets its own semver line and CHANGELOG, bumped only when it actually changes. Contributors add a changeset (`pnpm changeset`) alongside their PR describing the change and bump type; a release PR batches and publishes. Matches the fact that `otel-web`/`otel-react` will likely iterate faster than the more stable `otel-core`. |
+| Lockstep versioning (all packages share one version number) | Simpler mental model ("everything is v1.4.0"), but forces a version (and changelog noise) bump on `otel-web` even when only `otel-node` changed, and misrepresents compatibility — consumers would reasonably assume a lockstep bump means something changed everywhere.                                                                          |
+| Manual versioning / hand-written CHANGELOGs                 | No tooling dependency, but error-prone (forgotten bumps, inconsistent changelog format) and doesn't scale as more contributors touch the repo.                                                                                                                                                                                                    |
 
 **Chosen: Changesets with independent versioning.** It keeps semver meaningful per
 package, generates CHANGELOGs automatically from PR-time changeset files, and is the

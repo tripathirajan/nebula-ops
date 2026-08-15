@@ -2,13 +2,14 @@
 
 **There is no separate OpenTelemetry SDK for React.** Everything in this chapter is
 the same `WebTracerProvider`/instrumentation/context-propagation machinery from
-chapter 3, used *inside* a React app — the interesting content here is entirely about
+chapter 3, used _inside_ a React app — the interesting content here is entirely about
 where React's own model (component lifecycle, StrictMode, concurrent rendering,
 SSR/hydration) creates friction or grey areas that a plain (non-framework) browser
 app in chapter 3 never has to deal with. Read chapter 3 first — this chapter assumes
 it and doesn't repeat the Zone-vs-Stack, CORS, or web-vitals material.
 
 **Official references used throughout this chapter:**
+
 - React `StrictMode` (double-invocation in development): https://react.dev/reference/react/StrictMode
 - React `useEffect` timing and cleanup: https://react.dev/reference/react/useEffect
 - React error boundaries: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
@@ -49,7 +50,9 @@ provider.register({ contextManager: new ZoneContextManager() });
 
 registerInstrumentations({
   instrumentations: [
-    new FetchInstrumentation({ propagateTraceHeaderCorsUrls: [/^https:\/\/api\.internal\.example\.com/] }),
+    new FetchInstrumentation({
+      propagateTraceHeaderCorsUrls: [/^https:\/\/api\.internal\.example\.com/],
+    }),
     new DocumentLoadInstrumentation(),
   ],
 });
@@ -67,7 +70,7 @@ createRoot(document.getElementById('root')!).render(<App />);
 ```
 
 **The mistake this avoids, stated explicitly:** initializing `WebTracerProvider`
-*inside* a React component (even the top-level `App` component, even in a
+_inside_ a React component (even the top-level `App` component, even in a
 `useEffect` with an empty dependency array) means instrumentation registration
 happens **after** React has already started rendering and (with `StrictMode`, §9.3)
 potentially after some effects have already fired once. `FetchInstrumentation`
@@ -90,8 +93,8 @@ component or hook rather than at module scope (§9.2):
 function CheckoutPage() {
   useEffect(() => {
     const span = tracer.startSpan('checkout_page.view'); // ← StrictMode calls this
-                                                            //   effect's setup TWICE
-                                                            //   in development
+    //   effect's setup TWICE
+    //   in development
     return () => span.end();
   }, []);
   // ...
@@ -134,7 +137,7 @@ function useSpan(name: string, options?: SpanOptions) {
 
 **Why `useRef` + lazy-init rather than `useState`/`useMemo`:** a span needs to be
 created exactly once per component instance and live for that instance's full
-mounted lifetime — `useMemo` is documented by React as a *performance* hint, not a
+mounted lifetime — `useMemo` is documented by React as a _performance_ hint, not a
 lifetime guarantee (React is explicitly allowed to discard and recompute a memoized
 value, e.g. under certain concurrent-rendering scenarios, §9.7), so relying on it for
 something with real side effects (a span that must be `.end()`-able exactly once) is
@@ -223,7 +226,7 @@ class OtelErrorBoundary extends React.Component<
 **The conditional `span.end()` is deliberate, not a stylistic choice:** if there's
 already an active span (e.g. a route-change span from §9.5 that's still open while
 this component was rendering under it), the error should be recorded as an event
-*on that existing span* rather than manufacturing an unrelated new one — but if
+_on that existing span_ rather than manufacturing an unrelated new one — but if
 there's no active span at all (a boundary catching an error outside any traced
 operation), a dedicated span is the only way to get the error recorded at all, and
 that one genuinely needs to be ended here since nothing else owns its lifecycle.
@@ -306,8 +309,12 @@ browser that later hydrates the page. Two distinct problems this creates:
 
 ```tsx
 // client bootstrap — read it once, link (not parent) the first client span to it
-const serverTraceparent = document.querySelector('meta[name="traceparent"]')?.getAttribute('content');
-const link = serverTraceparent ? { context: parseTraceparentIntoSpanContext(serverTraceparent) } : undefined;
+const serverTraceparent = document
+  .querySelector('meta[name="traceparent"]')
+  ?.getAttribute('content');
+const link = serverTraceparent
+  ? { context: parseTraceparentIntoSpanContext(serverTraceparent) }
+  : undefined;
 const initialSpan = tracer.startSpan('client.hydrate', { links: link ? [link] : [] });
 ```
 
@@ -347,15 +354,15 @@ assertions, same caution as chapter 7 §7.9's edge case #4.
 
 ## 9.10 Edge cases and grey areas checklist
 
-| # | Scenario | What actually happens | Reference |
-|---|---|---|---|
-| 1 | Tracing bootstrap placed inside a component/`useEffect` instead of module scope | Fetch calls issued by components that mount before that effect runs go un-instrumented, silently | §9.2 |
-| 2 | `StrictMode` in development | Effect-created spans are created twice (setup→cleanup→setup) — expected dev-only noise, not a production bug, and not something to "fix" by removing cleanup or adding fragile guards | §9.3 |
-| 3 | Span created unconditionally in a component's render body rather than via lazy-`useRef`/`useEffect` | Concurrent rendering (§9.7) can invoke the render body multiple times per logical render, creating extra untracked spans with no cleanup signal | §9.4, §9.7 |
-| 4 | Route-change span ended immediately on navigation event rather than on route content actually finishing load | Measures "did navigation start," not perceived page-load speed — a much weaker signal than usually intended | §9.5 |
-| 5 | Error boundary always creates a new span for `recordException` regardless of whether one was already active | Disconnected single-span "traces" for errors that occurred inside an otherwise well-traced operation, losing the surrounding context | §9.6 |
-| 6 | Error thrown inside a `useEffect`'s async code or an event handler | Not caught by `OtelErrorBoundary` at all — React boundaries only catch render-phase errors; needs separate `try/catch`/global handler coverage | §9.6 |
-| 7 | `useTransition`/Suspense-driven concurrent updates relied on for exact span-timing correctness | No documented, official guarantee either `ZoneContextManager` or `StackContextManager` correctly tracks context across React's internal scheduler — treat as needing explicit verification, not assumed correct | §9.7 |
-| 8 | `otel-web` bootstrap accidentally imported/run in server-rendered (SSR) code | Throws or misbehaves — `WebTracerProvider`/browser instrumentations assume `window`/`document` exist; needs an explicit client-only guard per the framework's convention | §9.8 |
-| 9 | SSR app with no explicit trace-context bridging between server render and client hydration | Server-side and client-side traces for the "same" page load are completely disconnected by default — not a bug, just an unaddressed gap unless deliberately bridged via `traceparent` injection + Links | §9.8 |
-| 10 | Test suite reuses one `InMemorySpanExporter`/provider across multiple test files without resetting | Spans from an earlier test leak into a later test's assertions | §9.9 |
+| #   | Scenario                                                                                                     | What actually happens                                                                                                                                                                                           | Reference  |
+| --- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | Tracing bootstrap placed inside a component/`useEffect` instead of module scope                              | Fetch calls issued by components that mount before that effect runs go un-instrumented, silently                                                                                                                | §9.2       |
+| 2   | `StrictMode` in development                                                                                  | Effect-created spans are created twice (setup→cleanup→setup) — expected dev-only noise, not a production bug, and not something to "fix" by removing cleanup or adding fragile guards                           | §9.3       |
+| 3   | Span created unconditionally in a component's render body rather than via lazy-`useRef`/`useEffect`          | Concurrent rendering (§9.7) can invoke the render body multiple times per logical render, creating extra untracked spans with no cleanup signal                                                                 | §9.4, §9.7 |
+| 4   | Route-change span ended immediately on navigation event rather than on route content actually finishing load | Measures "did navigation start," not perceived page-load speed — a much weaker signal than usually intended                                                                                                     | §9.5       |
+| 5   | Error boundary always creates a new span for `recordException` regardless of whether one was already active  | Disconnected single-span "traces" for errors that occurred inside an otherwise well-traced operation, losing the surrounding context                                                                            | §9.6       |
+| 6   | Error thrown inside a `useEffect`'s async code or an event handler                                           | Not caught by `OtelErrorBoundary` at all — React boundaries only catch render-phase errors; needs separate `try/catch`/global handler coverage                                                                  | §9.6       |
+| 7   | `useTransition`/Suspense-driven concurrent updates relied on for exact span-timing correctness               | No documented, official guarantee either `ZoneContextManager` or `StackContextManager` correctly tracks context across React's internal scheduler — treat as needing explicit verification, not assumed correct | §9.7       |
+| 8   | `otel-web` bootstrap accidentally imported/run in server-rendered (SSR) code                                 | Throws or misbehaves — `WebTracerProvider`/browser instrumentations assume `window`/`document` exist; needs an explicit client-only guard per the framework's convention                                        | §9.8       |
+| 9   | SSR app with no explicit trace-context bridging between server render and client hydration                   | Server-side and client-side traces for the "same" page load are completely disconnected by default — not a bug, just an unaddressed gap unless deliberately bridged via `traceparent` injection + Links         | §9.8       |
+| 10  | Test suite reuses one `InMemorySpanExporter`/provider across multiple test files without resetting           | Spans from an earlier test leak into a later test's assertions                                                                                                                                                  | §9.9       |

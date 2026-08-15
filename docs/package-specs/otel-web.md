@@ -15,9 +15,9 @@ browser-side OpenTelemetry SDK packages — never on `otel-node`.
 ```ts
 export interface NebulaWebTracerOptions extends Partial<NebulaOtelConfig> {
   instrumentations?: Instrumentation[]; // default: fetch + XHR + document-load
-  exporter?: SpanExporter;              // default: OTLPTraceExporter (HTTP) from config.endpoint
+  exporter?: SpanExporter; // default: OTLPTraceExporter (HTTP) from config.endpoint
   propagateTraceHeaderCorsUrls?: (string | RegExp)[]; // which origins get trace headers
-  contextManager?: ContextManager;      // default: StackContextManager (pass ZoneContextManager explicitly to opt in — see ADR 0002 #1)
+  contextManager?: ContextManager; // default: StackContextManager (pass ZoneContextManager explicitly to opt in — see ADR 0002 #1)
 }
 
 export function initWebTracer(options?: NebulaWebTracerOptions): WebTracerProvider;
@@ -28,7 +28,7 @@ export function shutdownWebTracer(provider: WebTracerProvider): Promise<void>;
 // event / standalone span on the provided tracer provider.
 export function reportWebVitalsAsSpans(
   provider: WebTracerProvider,
-  options?: { metrics?: WebVitalName[] }
+  options?: { metrics?: WebVitalName[] },
 ): () => void; // returns unsubscribe function
 
 // ---- console bridge ----
@@ -50,31 +50,31 @@ export const OTEL_WEB_VERSION: string;
 
 ## Internal modules
 
-| Module | Responsibility |
-|---|---|
-| `src/tracer/init.ts` | `initWebTracer` — builds `Resource` via `otel-core#buildResource`, assembles instrumentations/exporter from options, constructs and registers `WebTracerProvider`. |
-| `src/tracer/shutdown.ts` | `shutdownWebTracer`. |
-| `src/tracer/defaults.ts` | Default instrumentation set (`FetchInstrumentation`, `XMLHttpRequestInstrumentation`, `DocumentLoadInstrumentation`) and default OTLP/HTTP exporter factory. |
-| `src/context/context-manager.ts` | Installs `StackContextManager` (from `@opentelemetry/sdk-trace-web`) by default; installs `ZoneContextManager` (from `@opentelemetry/context-zone`, an optional peer dep) only if explicitly passed via the `contextManager` option — see [ADR 0002 #1](../adr/0002-open-questions-resolutions.md#1-otel-webs-default-contextmanager-stack-not-zone) for why Stack is the default. This is the browser-specific half of the log-context story described in `otel-core`. |
-| `src/vitals/report-web-vitals.ts` | `reportWebVitalsAsSpans`, wrapping the `web-vitals` package's `onCLS`/`onLCP`/etc. callbacks. |
-| `src/logging/console-bridge.ts` | `installConsoleBridge`, calling `otel-core#logContextFromActiveSpan` and optionally emitting OTel log records via `@opentelemetry/sdk-logs`. |
-| `src/config/from-build-env.ts` | Helper documenting/normalizing how build-time-injected config values (e.g. via Vite `import.meta.env` or webpack `DefinePlugin`) map to the `ConfigSource` shape `otel-core#resolveConfig` expects. Does **not** read `process.env` itself. |
-| `src/index.ts` | Public export barrel. |
+| Module                            | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/tracer/init.ts`              | `initWebTracer` — builds `Resource` via `otel-core#buildResource`, assembles instrumentations/exporter from options, constructs and registers `WebTracerProvider`.                                                                                                                                                                                                                                                                                                      |
+| `src/tracer/shutdown.ts`          | `shutdownWebTracer`.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `src/tracer/defaults.ts`          | Default instrumentation set (`FetchInstrumentation`, `XMLHttpRequestInstrumentation`, `DocumentLoadInstrumentation`) and default OTLP/HTTP exporter factory.                                                                                                                                                                                                                                                                                                            |
+| `src/context/context-manager.ts`  | Installs `StackContextManager` (from `@opentelemetry/sdk-trace-web`) by default; installs `ZoneContextManager` (from `@opentelemetry/context-zone`, an optional peer dep) only if explicitly passed via the `contextManager` option — see [ADR 0002 #1](../adr/0002-open-questions-resolutions.md#1-otel-webs-default-contextmanager-stack-not-zone) for why Stack is the default. This is the browser-specific half of the log-context story described in `otel-core`. |
+| `src/vitals/report-web-vitals.ts` | `reportWebVitalsAsSpans`, wrapping the `web-vitals` package's `onCLS`/`onLCP`/etc. callbacks.                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/logging/console-bridge.ts`   | `installConsoleBridge`, calling `otel-core#logContextFromActiveSpan` and optionally emitting OTel log records via `@opentelemetry/sdk-logs`.                                                                                                                                                                                                                                                                                                                            |
+| `src/config/from-build-env.ts`    | Helper documenting/normalizing how build-time-injected config values (e.g. via Vite `import.meta.env` or webpack `DefinePlugin`) map to the `ConfigSource` shape `otel-core#resolveConfig` expects. Does **not** read `process.env` itself.                                                                                                                                                                                                                             |
+| `src/index.ts`                    | Public export barrel.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## External dependencies
 
-| Package | Version range | Kind |
-|---|---|---|
-| `@opentelemetry/api` | `^1.9.0` | `peerDependency` (+ `devDependency`) |
-| `@nebula-ops/otel-core` | `workspace:*` → published semver range | `dependency` |
-| `@opentelemetry/sdk-trace-web` | `~1.28.0` | `dependency` |
-| `@opentelemetry/instrumentation-fetch` | `~0.55.0` | `dependency` |
-| `@opentelemetry/instrumentation-xml-http-request` | `~0.55.0` | `dependency` |
-| `@opentelemetry/instrumentation-document-load` | `~0.42.0` | `dependency` |
-| `@opentelemetry/exporter-trace-otlp-http` | `~0.55.0` | `dependency` |
-| `@opentelemetry/context-zone` | `~1.28.0` | `peerDependency`, optional (`peerDependenciesMeta: { optional: true }`) — only needed if a consumer explicitly opts into `ZoneContextManager`; not installed by default so `zone.js` never lands in a consumer's bundle unasked (ADR 0002 #1) |
-| `@opentelemetry/sdk-logs` | `~0.55.0` | `dependency` (used only by the console bridge's optional log-record emission) |
-| `web-vitals` | `^4.2.0` | `dependency` |
+| Package                                           | Version range                          | Kind                                                                                                                                                                                                                                          |
+| ------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@opentelemetry/api`                              | `^1.9.0`                               | `peerDependency` (+ `devDependency`)                                                                                                                                                                                                          |
+| `@nebula-ops/otel-core`                           | `workspace:*` → published semver range | `dependency`                                                                                                                                                                                                                                  |
+| `@opentelemetry/sdk-trace-web`                    | `~1.28.0`                              | `dependency`                                                                                                                                                                                                                                  |
+| `@opentelemetry/instrumentation-fetch`            | `~0.55.0`                              | `dependency`                                                                                                                                                                                                                                  |
+| `@opentelemetry/instrumentation-xml-http-request` | `~0.55.0`                              | `dependency`                                                                                                                                                                                                                                  |
+| `@opentelemetry/instrumentation-document-load`    | `~0.42.0`                              | `dependency`                                                                                                                                                                                                                                  |
+| `@opentelemetry/exporter-trace-otlp-http`         | `~0.55.0`                              | `dependency`                                                                                                                                                                                                                                  |
+| `@opentelemetry/context-zone`                     | `~1.28.0`                              | `peerDependency`, optional (`peerDependenciesMeta: { optional: true }`) — only needed if a consumer explicitly opts into `ZoneContextManager`; not installed by default so `zone.js` never lands in a consumer's bundle unasked (ADR 0002 #1) |
+| `@opentelemetry/sdk-logs`                         | `~0.55.0`                              | `dependency` (used only by the console bridge's optional log-record emission)                                                                                                                                                                 |
+| `web-vitals`                                      | `^4.2.0`                               | `dependency`                                                                                                                                                                                                                                  |
 
 ## Non-goals
 

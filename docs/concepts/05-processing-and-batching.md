@@ -23,6 +23,7 @@ named concept, **MetricReader** (§5.6), because metrics are pull/periodic-colle
 rather than emitted-per-event the way spans/logs are.
 
 **Official references used throughout this chapter:**
+
 - `BatchSpanProcessor` API reference: https://open-telemetry.github.io/opentelemetry-js/classes/_opentelemetry_sdk_trace_base.BatchSpanProcessor.html
 - Trace SDK environment variables (batch tuning via env, not just code): https://opentelemetry.io/docs/languages/sdk-configuration/general/#batch-span-processor
 - `PeriodicExportingMetricReader`: https://opentelemetry.io/docs/languages/js/instrumentation/#metrics
@@ -42,17 +43,17 @@ rather than emitted-per-event the way spans/logs are.
     where you want spans available for assertions immediately, without waiting on a
     batch timer — see the `otel-testing` non-goal notes in
     [`../package-specs/otel-testing.md`](../package-specs/otel-testing.md), which is
-    a *test-only* use of this idea, not a production pattern).
+    a _test-only_ use of this idea, not a production pattern).
 - **`BatchSpanProcessor`** — buffers spans in memory and exports them **periodically
   in batches**, decoupling "span ended" from "network call happened." This is the
   standard production choice, tuned by:
 
-  | Option | What it controls | Typical default |
-  |---|---|---|
-  | `maxQueueSize` | Max spans buffered before new ones are **dropped** (with a recorded "dropped spans" count, not silently). | 2048 |
-  | `maxExportBatchSize` | Max spans sent per single export call. | 512 |
-  | `scheduledDelayMillis` | How often the processor attempts to flush a batch, even if not full. | 5000 |
-  | `exportTimeoutMillis` | How long a single export call is allowed to run before being abandoned. | 30000 |
+  | Option                 | What it controls                                                                                          | Typical default |
+  | ---------------------- | --------------------------------------------------------------------------------------------------------- | --------------- |
+  | `maxQueueSize`         | Max spans buffered before new ones are **dropped** (with a recorded "dropped spans" count, not silently). | 2048            |
+  | `maxExportBatchSize`   | Max spans sent per single export call.                                                                    | 512             |
+  | `scheduledDelayMillis` | How often the processor attempts to flush a batch, even if not full.                                      | 5000            |
+  | `exportTimeoutMillis`  | How long a single export call is allowed to run before being abandoned.                                   | 30000           |
 
   The trade-off this tuning controls: **latency of telemetry visibility** (how long
   after a span ends before it's visible in your backend — bounded by
@@ -68,7 +69,11 @@ with an equivalent options shape.
 
 ```ts
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { SimpleSpanProcessor, BatchSpanProcessor, ConsoleSpanExporter } from '@opentelemetry/sdk-trace-base';
+import {
+  SimpleSpanProcessor,
+  BatchSpanProcessor,
+  ConsoleSpanExporter,
+} from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 
 // Local dev / debugging: print every span the instant it ends. Never use in production.
@@ -79,12 +84,15 @@ const devProvider = new NodeTracerProvider({
 // Production: buffer and batch.
 const prodProvider = new NodeTracerProvider({
   spanProcessors: [
-    new BatchSpanProcessor(new OTLPTraceExporter({ url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT }), {
-      maxQueueSize: 2048,
-      maxExportBatchSize: 512,
-      scheduledDelayMillis: 5000,
-      exportTimeoutMillis: 30000,
-    }),
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({ url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT }),
+      {
+        maxQueueSize: 2048,
+        maxExportBatchSize: 512,
+        scheduledDelayMillis: 5000,
+        exportTimeoutMillis: 30000,
+      },
+    ),
   ],
 });
 ```
@@ -194,14 +202,14 @@ const provider = new NodeTracerProvider({
 Each processor gets an independent callback on every span end — one exporter failing
 or being slow does not block or affect the other; they're not chained, they're
 fanned out. This is the mechanism (not `if (dev) use console else use otlp`
-branching on the *processor type itself*) for supporting "both, conditionally" setups
+branching on the _processor type itself_) for supporting "both, conditionally" setups
 cleanly.
 
 ## 5.5 Metrics: MetricReader instead of a processor
 
 Metrics don't have a discrete "this one thing just happened, decide whether to
 process it now" moment the way a span-end or log-emit does — instruments accumulate
-values continuously (a Counter keeps incrementing) and someone has to *read* their
+values continuously (a Counter keeps incrementing) and someone has to _read_ their
 current state periodically. That's `PeriodicExportingMetricReader` (pull the current
 value of every registered instrument on a fixed interval, e.g. every 60s, and hand it
 to a `MetricExporter`) — conceptually parallel to `BatchSpanProcessor`'s
@@ -225,7 +233,9 @@ const meterProvider = new MeterProvider({
 });
 
 const meter = meterProvider.getMeter('checkout-service');
-const ordersCounter = meter.createCounter('orders.created', { description: 'Number of orders created' });
+const ordersCounter = meter.createCounter('orders.created', {
+  description: 'Number of orders created',
+});
 
 // application code, anywhere, anytime:
 ordersCounter.add(1, { 'order.payment_method': 'card' });
@@ -237,7 +247,7 @@ The key mechanical difference from `BatchSpanProcessor` worth internalizing: cal
 `.add()` does **not** enqueue anything for export the way ending a span does — it
 mutates the Counter's current accumulated value in place. There's no per-call queue
 to overflow (§5.3's failure mode) the way spans have; the only per-tick cost is
-proportional to the number of *distinct attribute combinations* ever recorded
+proportional to the number of _distinct attribute combinations_ ever recorded
 (cardinality, ch. 6 §6.4), not the number of `.add()` calls.
 
 ## 5.6 Shutdown and flush semantics
@@ -289,12 +299,12 @@ telemetry at all, since the provider was already torn down.
 
 ## 5.7 Edge cases and grey areas checklist
 
-| # | Scenario | What actually happens | Reference |
-|---|---|---|---|
-| 1 | `SimpleSpanProcessor` accidentally left in a production build | Every span end blocks briefly on a synchronous export call — real, measurable latency added to every traced operation, not just a "less efficient" choice | §5.2 |
-| 2 | Traffic spike exceeds `maxQueueSize` | Spans silently dropped, no exception, no signal to application code — only visible via OTel's own internal diagnostics or by noticing sparse traces after the fact | §5.3 |
-| 3 | Exporter destination returns HTTP 401/403 (misconfigured auth, not a transient failure) | **Not** retried (non-retryable per the OTLP spec) — that batch is dropped immediately; worth alerting on this specific class of exporter error since it indicates a config problem, not backend flakiness | §5.3 |
-| 4 | Collector/backend has an extended outage longer than the exporter's retry budget | All spans produced during the outage (beyond what fits in the queue during the outage) are lost — there is no SDK-level durable local buffer; only a Collector with disk-backed storage provides that | §5.3 |
-| 5 | `forceFlush()` called where `shutdown()` was intended (e.g. at true process exit) | Buffered spans do get flushed, but the provider is left running — harmless at process exit (process dies right after anyway) but wastes the explicit teardown | §5.6 |
-| 6 | `shutdown()` called where `forceFlush()` was intended (e.g. end of each FaaS invocation) | Provider is torn down — every subsequent invocation on a reused/warm instance produces zero telemetry silently, since there's no active processor left to record into | §5.6 |
-| 7 | Metric instrument recorded with an unbounded-cardinality attribute (e.g. `user_id`) | Not a batching/processing failure exactly, but relevant here: `PeriodicExportingMetricReader` still has to serialize and export every distinct attribute-combination's data point on every tick — this is where cardinality (ch. 6 §6.4) becomes a processing-cost problem, not just a backend-storage-cost one | §5.5, ch. 6 §6.4 |
+| #   | Scenario                                                                                 | What actually happens                                                                                                                                                                                                                                                                                           | Reference        |
+| --- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 1   | `SimpleSpanProcessor` accidentally left in a production build                            | Every span end blocks briefly on a synchronous export call — real, measurable latency added to every traced operation, not just a "less efficient" choice                                                                                                                                                       | §5.2             |
+| 2   | Traffic spike exceeds `maxQueueSize`                                                     | Spans silently dropped, no exception, no signal to application code — only visible via OTel's own internal diagnostics or by noticing sparse traces after the fact                                                                                                                                              | §5.3             |
+| 3   | Exporter destination returns HTTP 401/403 (misconfigured auth, not a transient failure)  | **Not** retried (non-retryable per the OTLP spec) — that batch is dropped immediately; worth alerting on this specific class of exporter error since it indicates a config problem, not backend flakiness                                                                                                       | §5.3             |
+| 4   | Collector/backend has an extended outage longer than the exporter's retry budget         | All spans produced during the outage (beyond what fits in the queue during the outage) are lost — there is no SDK-level durable local buffer; only a Collector with disk-backed storage provides that                                                                                                           | §5.3             |
+| 5   | `forceFlush()` called where `shutdown()` was intended (e.g. at true process exit)        | Buffered spans do get flushed, but the provider is left running — harmless at process exit (process dies right after anyway) but wastes the explicit teardown                                                                                                                                                   | §5.6             |
+| 6   | `shutdown()` called where `forceFlush()` was intended (e.g. end of each FaaS invocation) | Provider is torn down — every subsequent invocation on a reused/warm instance produces zero telemetry silently, since there's no active processor left to record into                                                                                                                                           | §5.6             |
+| 7   | Metric instrument recorded with an unbounded-cardinality attribute (e.g. `user_id`)      | Not a batching/processing failure exactly, but relevant here: `PeriodicExportingMetricReader` still has to serialize and export every distinct attribute-combination's data point on every tick — this is where cardinality (ch. 6 §6.4) becomes a processing-cost problem, not just a backend-storage-cost one | §5.5, ch. 6 §6.4 |

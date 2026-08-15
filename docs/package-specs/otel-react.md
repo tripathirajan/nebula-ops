@@ -34,7 +34,9 @@ export function useSpan(name: string, options?: UseSpanOptions): Span;
 // (React Router, Next.js router, etc.) rather than otel-react depending on any
 // specific router package.
 export interface RouteChangeSource {
-  subscribe(onChange: (route: { path: string; params?: Record<string, string> }) => void): () => void;
+  subscribe(
+    onChange: (route: { path: string; params?: Record<string, string> }) => void,
+  ): () => void;
 }
 
 export interface RouteSpanOptions {
@@ -44,7 +46,7 @@ export interface RouteSpanOptions {
 export function withRouteChangeSpans(
   provider: WebTracerProvider,
   source: RouteChangeSource,
-  options?: RouteSpanOptions
+  options?: RouteSpanOptions,
 ): () => void; // returns unsubscribe function
 
 // ---- Error boundary ----
@@ -58,7 +60,7 @@ export class OtelErrorBoundary extends React.Component<OtelErrorBoundaryProps> {
 
 export function withOtelErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  boundaryProps?: Omit<OtelErrorBoundaryProps, 'children'>
+  boundaryProps?: Omit<OtelErrorBoundaryProps, 'children'>,
 ): React.ComponentType<P>;
 
 export const OTEL_REACT_VERSION: string;
@@ -66,21 +68,21 @@ export const OTEL_REACT_VERSION: string;
 
 ## Internal modules
 
-| Module | Responsibility |
-|---|---|
-| `src/hooks/use-span.ts` | `useSpan` — creates span via active tracer from `otel-web`'s registered provider, manages lifecycle via `useEffect`. |
-| `src/router/route-change-spans.ts` | `withRouteChangeSpans`, `RouteChangeSource` — router-agnostic adapter pattern; no direct dependency on React Router/Next.js. |
-| `src/boundary/error-boundary.tsx` | `OtelErrorBoundary` class component — records `componentDidCatch` errors as span events via `otel-core`-derived active span, or a dedicated error span if none active. |
-| `src/boundary/with-error-boundary.tsx` | `withOtelErrorBoundary` HOC wrapper. |
-| `src/index.ts` | Public export barrel. |
+| Module                                 | Responsibility                                                                                                                                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/hooks/use-span.ts`                | `useSpan` — creates span via active tracer from `otel-web`'s registered provider, manages lifecycle via `useEffect`.                                                   |
+| `src/router/route-change-spans.ts`     | `withRouteChangeSpans`, `RouteChangeSource` — router-agnostic adapter pattern; no direct dependency on React Router/Next.js.                                           |
+| `src/boundary/error-boundary.tsx`      | `OtelErrorBoundary` class component — records `componentDidCatch` errors as span events via `otel-core`-derived active span, or a dedicated error span if none active. |
+| `src/boundary/with-error-boundary.tsx` | `withOtelErrorBoundary` HOC wrapper.                                                                                                                                   |
+| `src/index.ts`                         | Public export barrel.                                                                                                                                                  |
 
 ## External dependencies
 
-| Package | Version range | Kind |
-|---|---|---|
-| `@opentelemetry/api` | `^1.9.0` | `peerDependency` |
-| `@nebula-ops/otel-web` | `workspace:*` → published semver range | `dependency` |
-| `react` | `^18.0.0 \|\| ^19.0.0` | `peerDependency` |
+| Package                | Version range                          | Kind             |
+| ---------------------- | -------------------------------------- | ---------------- |
+| `@opentelemetry/api`   | `^1.9.0`                               | `peerDependency` |
+| `@nebula-ops/otel-web` | `workspace:*` → published semver range | `dependency`     |
+| `react`                | `^18.0.0 \|\| ^19.0.0`                 | `peerDependency` |
 
 ## Non-goals
 
