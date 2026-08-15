@@ -3,7 +3,11 @@
 Same treatment as chapter 2: runnable-shape examples, official references per
 section, and a dedicated edge-case checklist. Read §3.1's "why this is a genuinely
 different problem than Node" first if you haven't — the rest of this chapter assumes
-it.
+it. This chapter covers plain (framework-agnostic) browser usage; if you're building
+a React app specifically, read this chapter first and then
+[`09-otel-web-in-react.md`](09-otel-web-in-react.md) for the React-specific
+integration patterns and gotchas (StrictMode, concurrent rendering, SSR/hydration)
+layered on top of everything here.
 
 **Official references used throughout this chapter:**
 - Browser getting-started guide: https://opentelemetry.io/docs/languages/js/getting-started/browser/

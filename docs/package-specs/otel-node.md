@@ -85,3 +85,23 @@ only one of the two logger bindings shouldn't be forced to install the other.
   apps' own tests should use `otel-testing`, not reach into `otel-node` internals.)
 - Does not manage secrets — OTLP `headers`/`endpoint` are passed through from config
   only, never hardcoded or logged.
+- Does not expose a config passthrough for `enhancedDatabaseReporting` or verbatim
+  Redis command-argument capture — both are real PII/secret exposure risks
+  ([concepts ch. 2 §2.6](../concepts/02-otel-node.md#26-outbound-calls--httpdbredis-client-spans)).
+  A consumer that genuinely needs this constructs its own instrumentation instance
+  and passes it via the `instrumentations` override; it is never one config flag away
+  from being enabled. See [ADR 0002 #5](../adr/0002-open-questions-resolutions.md#5-enhanceddatabasereporting--redis-argument-capture-not-exposed-as-a-passthrough).
+- Does not bridge trace context across Redis pub/sub (`PUBLISH`/`SUBSCRIBE`) — no
+  standard upstream instrumentation does this either
+  ([concepts ch. 2 §2.6](../concepts/02-otel-node.md#26-outbound-calls--httpdbredis-client-spans)).
+  Out of scope per [ADR 0002 #6](../adr/0002-open-questions-resolutions.md#6-redis-pubsub-trace-propagation-explicit-non-goal).
+- Does not ship message-queue-specific (Kafka/AMQP) helpers or wrap the
+  per-message `context.with()` pattern — documented in
+  [concepts ch. 2 §2.7](../concepts/02-otel-node.md#27-inboundoutbound-for-message-queues--the-pattern-that-breaks-naive-assumptions)
+  for consuming services to apply themselves. See
+  [ADR 0002 #7](../adr/0002-open-questions-resolutions.md#7-message-queue-consumer-context-scoping-documented-pattern-no-dedicated-code).
+- Does not commit to verified ESM support for M1–M3 — CJS is the tested target;
+  ESM output ships (dual build) but the loader-hook requirement for
+  auto-instrumentation under ESM ([concepts ch. 2 §2.9](../concepts/02-otel-node.md#29-esm--a-genuinely-different-mechanism-not-just-a-syntax-change))
+  is not exercised in CI at this stage. See
+  [ADR 0002 #8](../adr/0002-open-questions-resolutions.md#8-esm-support-cjs-is-the-verified-target-esm-is-best-effortundocumented-for-m1m3).

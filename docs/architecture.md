@@ -165,10 +165,10 @@ redefining the shared fields). Resolution order (highest to lowest precedence):
 | `serviceName` | `OTEL_SERVICE_NAME` | Required; no default. |
 | `serviceVersion` | `NEBULA_OTEL_SERVICE_VERSION` | Falls back to consuming app's `package.json` version when available (Node only, best-effort). |
 | `environment` | `NEBULA_OTEL_ENVIRONMENT` | e.g. `production`, `staging`, `local`. Maps to `deployment.environment` resource attribute. |
-| `endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OTel env var, honored directly. |
+| `endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OTel env var, honored directly. Assumes an OpenTelemetry Collector (or OTLP-compatible backend) is reachable at this address in production — this repo's code does not implement Collector-side concerns (tail sampling, durable buffering) itself; see [ADR 0002 #2](adr/0002-open-questions-resolutions.md#2-tail-based-sampling--collector-deployment-assumption). |
 | `headers` | `OTEL_EXPORTER_OTLP_HEADERS` | Parsed from the standard `k1=v1,k2=v2` format. **Never a source of secrets committed to the repo** — always supplied by the consuming app's own env/secret manager. |
 | `resourceAttributes` | `OTEL_RESOURCE_ATTRIBUTES` | Standard OTel env var (`k1=v1,k2=v2`), merged with `NebulaAttributes` and explicit overrides. |
-| `sampling.ratio` | `NEBULA_OTEL_SAMPLING_RATIO` | 0–1, default 1 in non-production, configurable default for production (proposed: 0.1) — finalized in `otel-core` package spec. |
+| `sampling.ratio` | `NEBULA_OTEL_SAMPLING_RATIO` | 0–1, default `1.0` (100%) in every environment — deliberately not pre-guessed lower for production since this is a new project with no traffic baseline to size a default against; each service overrides once its volume is known. See [ADR 0002 #2](adr/0002-open-questions-resolutions.md#2-tail-based-sampling--collector-deployment-assumption). |
 
 `otel-node` reads Node env vars directly. `otel-web` never reads `process.env` at
 runtime — browser config values must be explicitly passed in (typically injected at

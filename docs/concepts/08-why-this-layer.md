@@ -81,7 +81,7 @@ Per ch. 7 §7.3 and §7.7, the wrapper is not meant to hide OTel or invent a par
 | Sampling ratio as config, `ParentBased(TraceIdRatioBased(...))` as default (ch. 1 §1.6, ch. 6 §6.2) | `NebulaOtelConfig.sampling.ratio`, resolved in `otel-core`, applied when each environment package constructs its `TracerProvider` |
 | Cardinality-safe metric-attribute guidance (ch. 6 §6.4) | Not a config knob anywhere — a call-site convention documented for consumers, see §8.5 below |
 | In-memory exporters + assertion helpers (ch. 7 §7.7) | `otel-testing` — deliberately graph-neutral (ch. 7 §7.7's "shouldn't be per-service work" applies equally regardless of Node vs web) |
-| React-specific ergonomics (route-change spans, error boundary → span events) | `otel-react` — this is new surface area OTel itself has no opinion on at all (no signal/concept in ch. 1–6 corresponds to "route change"); it's pure convenience on top of `otel-web`'s tracer |
+| React-specific ergonomics (route-change spans, error boundary → span events, `useSpan`, StrictMode/concurrent-rendering-safe span lifecycle, SSR/hydration trace bridging) (ch. 9) | `otel-react` — this is new surface area OTel itself has no opinion on at all (no signal/concept in ch. 1–6 corresponds to "route change" or "React component lifecycle"); it's pure convenience on top of `otel-web`'s tracer, and ch. 9 is where the reasoning behind each specific export in [`../package-specs/otel-react.md`](../package-specs/otel-react.md) actually lives |
 
 ## 8.4 Why the specific `otel-node`/`otel-web`-never-depend-on-each-other rule exists
 
@@ -119,8 +119,9 @@ implementation.
 ## 8.6 Open questions this primer surfaces for Phase 1 review
 
 These aren't blocking, but are worth explicit sign-off given what ch. 1–7 revealed.
-Items 1–3 carried over from the original pass; 4–8 are new, surfaced by the
-tutorial-depth expansion of ch. 2–7.
+Items 1–3 carried over from the original pass; 4–9 are new, surfaced by the
+tutorial-depth expansion of ch. 2–7 and, for item 9, by ch. 9's React-integration
+deep dive.
 
 1. **Zone.js for `otel-web`'s default `ContextManager`?** Ch. 3 §3.4 lays out the
    real trade-off, with a concrete failure example each way (Zone = more complete
@@ -177,3 +178,15 @@ tutorial-depth expansion of ch. 2–7.
    [`../package-specs/otel-node.md`](../package-specs/otel-node.md) either way,
    since "should work under ESM" and "verified to work under ESM" are different
    claims and the gap between them is exactly where this kind of bug hides.
+9. **SSR/hydration trace-context bridging — in scope for `otel-react`, or an
+   explicit non-goal?** Ch. 9 §9.8 shows the server-rendered request's trace
+   (`otel-node`) and the client's post-hydration trace (`otel-web`) are unrelated by
+   default, and that bridging them needs a deliberate `traceparent`-injection +
+   Link pattern — genuinely more design surface than "route-change spans" or
+   "error boundary" cover, and specific to SSR frameworks (Next.js/Remix) that
+   `otel-react`'s spec doesn't currently mention at all.
+   [`../package-specs/otel-react.md`](../package-specs/otel-react.md) should either
+   gain an explicit export for this (e.g. a helper that reads/parses an injected
+   `traceparent` meta tag) or an explicit non-goal line saying SSR bridging is left
+   to the consuming app — leaving it unaddressed silently is the one option worth
+   ruling out.
