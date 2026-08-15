@@ -94,3 +94,10 @@ export const OTEL_REACT_VERSION: string;
   `otel-web` since they're not React-specific.
 - Not built or published until M4 in [`docs/implementation-plan.md`](../implementation-plan.md);
   treated as optional scope, may be dropped without blocking the rest of the project.
+- Does not ship an SSR/hydration trace-context bridging helper (e.g. a
+  `traceparent`-meta-tag reader) for v1 — real, distinct design surface specific to
+  SSR frameworks ([concepts ch. 9 §9.8](../concepts/09-otel-web-in-react.md#98-server-side-rendering-and-hydration--otel-web-is-browser-only-and-the-handoff-is-a-real-gap)),
+  deliberately excluded to avoid risking this already-optional package's scope
+  growing past what ships. Consuming apps needing this implement the documented
+  pattern themselves until/unless demand justifies adding it. See
+  [ADR 0002 #9](../adr/0002-open-questions-resolutions.md#9-ssrhydration-trace-context-bridging-explicit-non-goal-for-otel-react-v1).
