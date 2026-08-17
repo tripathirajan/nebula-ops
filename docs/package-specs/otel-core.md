@@ -92,9 +92,25 @@ export const OTEL_CORE_VERSION: string;
 | Package                               | Version range | Kind                                                          |
 | ------------------------------------- | ------------- | ------------------------------------------------------------- |
 | `@opentelemetry/api`                  | `^1.9.0`      | `peerDependency` (+ matching `devDependency` for local build) |
-| `@opentelemetry/resources`            | `~1.26.0`     | `dependency`                                                  |
-| `@opentelemetry/semantic-conventions` | `~1.27.0`     | `dependency`                                                  |
+| `@opentelemetry/resources`            | `^2.10.0`     | `dependency`                                                  |
+| `@opentelemetry/semantic-conventions` | `^1.37.0`     | `dependency`                                                  |
 | `zod`                                 | `^3.23.0`     | `dependency` (config schema validation)                       |
+
+**Version-correction note (implementation time, M1):** this table originally pinned
+`@opentelemetry/resources ~1.26.0` and `@opentelemetry/semantic-conventions ~1.27.0`,
+guessed at Phase 1 planning time. By M1 implementation, the real npm registry had
+moved to `@opentelemetry/resources` 2.x, which **removed the `Resource` class's
+public constructor** (`new Resource(attrs)`) in favor of a `resourceFromAttributes(attrs)`
+factory function — `Resource` is now a non-user-constructible interface. `otel-core`'s
+`buildResource` was written against the verified 2.x API from the start of
+implementation (not against the stale 1.x guess), and `@opentelemetry/api`'s peer
+range (`^1.9.0`) stayed compatible across this bump (`resources@2.x` peers on
+`@opentelemetry/api >=1.3.0 <1.10.0`, `sdk-metrics@2.x` on `>=1.9.0 <1.10.0` — both
+satisfied by the same installed `1.9.1`), so no other otel-core export changed
+because of this. Flagged per CLAUDE.md's non-negotiable rules and the governance
+policy's "record exact version and why" requirement — this is the kind of deviation
+that's expected to happen when a spec is written from training-data knowledge rather
+than a live registry lookup, not evidence the spec process failed.
 
 No Node builtins, no DOM/browser globals, no bundler-specific imports.
 

@@ -1,4 +1,4 @@
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes, type Resource } from '@opentelemetry/resources';
 import type { NebulaOtelConfig } from '../config/schema.js';
 import { NebulaAttributes } from '../attributes/nebula-attributes.js';
 import { OTEL_CORE_VERSION } from '../version.js';
@@ -30,5 +30,12 @@ export function buildResource(config: NebulaOtelConfig): Resource {
   // Explicit resourceAttributes win over the derived values above (e.g. a caller
   // can override service.name's resource attribute independently of serviceName,
   // though that's an unusual thing to want — the precedence still holds either way).
-  return new Resource({ ...derived, ...config.resourceAttributes });
+  //
+  // Uses `resourceFromAttributes` (the `@opentelemetry/resources` 2.x factory
+  // function), not `new Resource(...)` — the 1.x `Resource` class constructor was
+  // removed in the 2.x line; `Resource` is now a non-user-constructible interface,
+  // per that package's own Resource.d.ts. See the version-correction note in
+  // docs/package-specs/otel-core.md's External dependencies table for why this
+  // package is pinned to 2.x rather than the ~1.26.0 originally spec'd.
+  return resourceFromAttributes({ ...derived, ...config.resourceAttributes });
 }
