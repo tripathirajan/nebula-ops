@@ -54,7 +54,7 @@ constraint verified in CI.
 - ESLint `no-restricted-imports` rule blocking Node builtins/browser globals is active
   on `packages/otel-core/src` and passes.
 - esbuild `platform: browser` smoke build of `otel-core` succeeds in CI.
-- `pnpm --filter @nebula-ops/otel-core build lint typecheck test` all pass.
+- `pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-core` all pass.
 - A changeset is added for `otel-core`'s initial `0.1.0` release.
 
 **Files touched:**
@@ -89,7 +89,7 @@ signatures, not just the spec) before starting `otel-node`/`otel-web`.
 - No import of any `otel-web` or browser-only package (checked by the same
   dependency-graph lint rule extended to enforce the "never depend on each other"
   rule from [`docs/architecture.md`](architecture.md)).
-- `pnpm --filter @nebula-ops/otel-node build lint typecheck test` all pass.
+- `pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-node` all pass.
 - A changeset is added for `otel-node`'s initial `0.1.0` release.
 
 **Files touched:**
@@ -106,6 +106,55 @@ non-goals.
 
 **Stop and check in:** demonstrate a minimal script that starts the SDK, makes a
 traced call, and shows a log line with matching trace id, before moving to `otel-web`.
+
+---
+
+## M2.5 — `otel-fastify` (added mid-implementation, not in the original M0–M5 plan)
+
+**Goal:** a Fastify plugin, built on `otel-node`, per
+[`docs/package-specs/otel-fastify.md`](package-specs/otel-fastify.md) — added after
+M2 shipped, in response to a direct request for a Fastify integration, establishing
+the "framework-specific packages depend on `otel-node`, not `otel-core` directly"
+pattern documented in [`docs/architecture.md`](architecture.md) §1.
+
+**Acceptance criteria:**
+
+- All exports in the package spec exist with matching signatures.
+- `otelFastifyPlugin` verified against a real Fastify instance (via `.inject()`) with
+  a real active span: route-pattern capture, error capture, and `ignoreRoutes`
+  filtering all independently verified, plus the "no active span" no-op paths.
+- `otelFastifyLoggerOptions()` verified to produce a working pino `mixin`.
+- Depends only on `otel-node` (never `otel-core` directly, never `otel-web`) —
+  matches the dependency graph in `docs/architecture.md` §1.
+- `pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-fastify` all pass.
+- A changeset is added for `otel-fastify`'s initial `0.1.0` release.
+
+**Files touched:**
+
+- `packages/otel-fastify/**`
+- `docs/package-specs/otel-fastify.md` (new)
+- `docs/architecture.md` §1 (dependency graph + new second-level dependency pattern note)
+- `.changeset/*.md`
+
+**Complexity:** M
+
+**Notable finding during implementation:** a test-only gotcha, not a package-code
+issue — `context.with(ctx, fn)` where `fn` is a plain synchronous arrow function
+that just returns Fastify's `app.inject()` promise directly lost AsyncLocalStorage
+propagation into the plugin's hooks in this specific combination, while wrapping the
+same call in an explicit `async () => { return app.inject(...) }` did not. A minimal
+reproduction using raw `node:async_hooks` `AsyncLocalStorage.run()` directly (no
+`@opentelemetry/api`, no Fastify) showed no such difference, so this appears specific
+to `ContextAPI.with()`'s or `app.inject()`'s own promise handling rather than a
+general AsyncLocalStorage behavior — documented in `test/plugin.test.ts`'s comment
+where the working form is used, flagged rather than fully root-caused since the fix
+is empirically verified correct either way. Worth a deeper look if it recurs
+elsewhere (e.g. when `otel-web` or other packages write similar `.inject()`-style
+integration tests).
+
+**Stop and check in:** confirm the "otel-node as base" dependency pattern this
+establishes is the one to follow for any future framework-specific package, before
+one gets added casually without the same spec-first discipline.
 
 ---
 
@@ -126,7 +175,7 @@ traced call, and shows a log line with matching trace id, before moving to `otel
   to install/uninstall cleanly.
 - No import of any `otel-node` or Node-builtin package (same dependency-graph lint
   rule as M2).
-- `pnpm --filter @nebula-ops/otel-web build lint typecheck test` all pass.
+- `pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-web` all pass.
 - A changeset is added for `otel-web`'s initial `0.1.0` release.
 
 **Files touched:**
@@ -156,7 +205,7 @@ there's appetite to continue.
   Library test.
 - `OtelErrorBoundary` verified to record a span event on a thrown error.
 - Depends only on `otel-web` (never `otel-node`) — enforced by lint.
-- `pnpm --filter @nebula-ops/otel-react build lint typecheck test` all pass.
+- `pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-react` all pass.
 - A changeset is added for `otel-react`'s initial `0.1.0` release.
 
 **Acceptance criteria (`otel-testing`):**
@@ -166,7 +215,7 @@ there's appetite to continue.
 - `expectSpan`/`expectLogRecord` verified against both a passing and a deliberately
   failing matcher (assertion actually throws with a useful message).
 - Zero dependency on any other `@nebula-ops/*` package — enforced by lint.
-- `pnpm --filter @nebula-ops/otel-testing build lint typecheck test` all pass.
+- `pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-testing` all pass.
 - A changeset is added for `otel-testing`'s initial `0.1.0` release.
 - (Retroactive, optional) M1–M3 test suites migrated from raw
   `@opentelemetry/sdk-trace-base` in-memory exporters to `otel-testing`'s helpers,

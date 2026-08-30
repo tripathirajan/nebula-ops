@@ -47,7 +47,7 @@ does, and does it respect the repo's structural rules?**
    might still be lingering in code written before the ADR existed.
 
 6. **Verify build/lint/typecheck/test actually pass** — run them
-   (`pnpm --filter @nebula-ops/<package> build lint typecheck test`) rather than
+   (`pnpm turbo run build lint typecheck test --filter=@nebula-ops/<package>`) rather than
    assuming from reading code that they would. Note coverage percentage from the test
    run output explicitly.
 

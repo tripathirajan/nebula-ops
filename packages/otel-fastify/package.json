@@ -1,0 +1,43 @@
+{
+  "name": "@nebula-ops/otel-fastify",
+  "version": "0.0.0",
+  "description": "Fastify plugin adding route-pattern span enrichment, error recording, and log correlation on top of @nebula-ops/otel-node.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "clean": "rm -rf dist coverage .turbo"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "fastify": "^5.0.0"
+  },
+  "dependencies": {
+    "@nebula-ops/otel-node": "workspace:*",
+    "@opentelemetry/semantic-conventions": "^1.37.0",
+    "fastify-plugin": "^6.0.0"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-async-hooks": "^2.10.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
+    "fastify": "^5.12.1"
+  }
+}

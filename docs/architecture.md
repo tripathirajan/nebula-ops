@@ -11,11 +11,13 @@ graph TD
     web["@nebula-ops/otel-web"]
     react["@nebula-ops/otel-react (stretch)"]
     testing["@nebula-ops/otel-testing (stretch)"]
+    fastify["@nebula-ops/otel-fastify"]
 
     api -.peer.-> core
     core --> node
     core --> web
     web --> react
+    node --> fastify
     api -.peer.-> testing
 
     classDef stretch stroke-dasharray: 5 5;
@@ -32,6 +34,13 @@ and checked in CI — see [`docs/repo-scaffold.md`](repo-scaffold.md)):
   (`fs`, `http`, `async_hooks` is the one deliberate exception, see §4 below), no
   browser globals (`window`, `document`, `fetch`).
 - `otel-react` depends on `otel-web` only (never on `otel-node`).
+- `otel-fastify` depends on `otel-node` only (Fastify is Node-only, and it needs
+  `otel-node`'s `createPinoMixin`/re-exported `trace`/`context`/`SpanStatusCode` —
+  see [`docs/package-specs/otel-fastify.md`](package-specs/otel-fastify.md)'s "why
+  otel-node as the base" note). This establishes a new, second-level dependency
+  pattern for framework-specific Node integrations — depend on `otel-node` (the
+  Node runtime-integration layer), not directly on `otel-core` — that any future
+  Node-framework package (`otel-koa`, `otel-hapi`, etc.) should follow the same way.
 - `otel-testing` depends on `@opentelemetry/api` and `@opentelemetry/sdk-trace-base`
   in-memory exporters only — it is dependency-graph-neutral (usable alongside either
   `otel-node` or `otel-web` in a consuming app's test suite) and is not depended on by

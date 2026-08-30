@@ -65,9 +65,19 @@ pnpm turbo run build               # build all packages (respects dependency gra
 pnpm turbo run lint                # ESLint, all packages
 pnpm turbo run typecheck           # tsc --noEmit, all packages
 pnpm turbo run test                # vitest, all packages
-pnpm --filter @nebula-ops/otel-core build lint typecheck test   # single package
+pnpm turbo run build lint typecheck test --filter=@nebula-ops/otel-core   # single package, all four tasks
 pnpm changeset                     # add a changeset for the current change
 ```
+
+**Do not run `pnpm --filter <pkg> build lint typecheck test`** (four script names with
+no separator) to run all four tasks for one package — pnpm treats everything after
+the first script name as _arguments to that script_, not as additional scripts to
+run. Since `build` runs `tsup`, `lint typecheck test` get parsed as extra entry-file
+globs, pulling `test/*.ts` files into the build and producing a spurious
+`rootDir`/`TS6059` failure that looks like a real build error but isn't — verified to
+reproduce identically across every package in this repo, not a package-specific bug.
+Use `pnpm turbo run build lint typecheck test --filter=<pkg>` (as above) or invoke
+each script separately (`pnpm --filter <pkg> run build`, `... run lint`, etc.).
 
 Every package is expected to pass `build`, `lint`, `typecheck`, and `test` before a
 change is considered done — see the coverage bar below.

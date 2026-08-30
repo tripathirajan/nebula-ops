@@ -82,7 +82,7 @@ of a spec is how the frozen-API-surface discipline this repo relies on breaks do
    §7.5 for the exact lint rule shape.
 
 9. **Verify the scaffold builds clean before writing real logic**: run
-   `pnpm --filter @nebula-ops/<name> build lint typecheck test` — an empty package
+   `pnpm turbo run build lint typecheck test --filter=@nebula-ops/<name>` — an empty package
    with just the barrel file and no real exports yet should still pass all four
    (test can be a single trivial passing test as a placeholder, coverage thresholds
    apply once real code exists).
