@@ -8,6 +8,7 @@ and links to the official docs it's based on. Section 2.10 is a standalone check
 of the edge cases/grey areas that don't fit neatly into "here's how X works."
 
 **Official references used throughout this chapter:**
+
 - Node getting-started guide: https://opentelemetry.io/docs/languages/js/getting-started/nodejs/
 - Instrumentation concepts: https://opentelemetry.io/docs/languages/js/instrumentation/
 - Exporters: https://opentelemetry.io/docs/languages/js/exporters/
@@ -52,7 +53,7 @@ Why `--require` (or `node --import` for ESM loaders, §2.9) instead of importing
 statements top-to-bottom as it parses `index.ts` itself, so if `index.ts`'s first line
 is `import './instrumentation'` followed later by `import express from 'express'`,
 there's no guaranteed ordering between "did the instrumentation's patching finish
-registering" and "did some *other* transitively-imported module already load
+registering" and "did some _other_ transitively-imported module already load
 `express` first." `--require` guarantees the instrumentation file's synchronous
 top-level code (`sdk.start()`) completes fully before Node even begins loading the
 app's own entry file. This is the single most common root cause of "auto-instrumentation
@@ -173,8 +174,8 @@ async function calculateOrderTotals(order: Order) {
     span.setAttribute('order.item_count', order.items.length);
     try {
       const totals = await computeTotals(order); // any nested instrumented calls
-                                                    // (e.g. a pg query in here) are
-                                                    // automatically parented to this span
+      // (e.g. a pg query in here) are
+      // automatically parented to this span
       span.setAttribute('order.total_cents', totals.totalCents);
       span.setStatus({ code: SpanStatusCode.OK });
       return totals;
@@ -194,7 +195,7 @@ Key points from the official tracing API docs
 
 - `startActiveSpan` both creates the span **and** makes it the active span in context
   for the duration of the callback — any instrumented call (an HTTP client call, a DB
-  query) made inside that callback automatically becomes a *child* span, with no
+  query) made inside that callback automatically becomes a _child_ span, with no
   manual context wiring needed, because instrumentation reads `context.active()`
   itself (§1.5).
 - `span.recordException` + `span.setStatus({ code: ERROR })` is the correct pairing
@@ -220,7 +221,7 @@ https://github.com/open-telemetry/opentelemetry-js-contrib/blob/main/doc/instrum
 `@opentelemetry/instrumentation-http` patches Node's built-in `http`/`https` modules
 (and therefore anything built on them — Express, Fastify, Koa, etc. get HTTP-level
 spans "for free" this way, with framework-specific instrumentations like
-`instrumentation-express` layering *route-level* detail — matched route pattern,
+`instrumentation-express` layering _route-level_ detail — matched route pattern,
 middleware timing — on top).
 
 What happens automatically on an inbound request:
@@ -234,12 +235,12 @@ What happens automatically on an inbound request:
    `http.request.method`, `url.path`, `http.response.status_code` per the semantic
    conventions.
 4. The span becomes the active context for the duration of the request handler — this
-   is *why* a DB call made inside an Express route handler automatically nests under
+   is _why_ a DB call made inside an Express route handler automatically nests under
    the request's server span without any manual linking.
 
 **Grey area worth flagging:** if the incoming request has **no** `traceparent` header
 at all (a request from a browser tab with no OTel instrumentation, an internal health
-check, an unrelated system), the server span becomes a *new root span* — this is
+check, an unrelated system), the server span becomes a _new root span_ — this is
 correct, expected behavior, not a bug — but it means "this trace looks incomplete/
 starts oddly at service B with no upstream span" is diagnostic of a missing
 propagation hop somewhere upstream (a proxy stripping headers, a client library that
@@ -269,10 +270,10 @@ import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 
 new PgInstrumentation({
   requireParentSpan: true, // don't create a span for queries with no active span
-                             // (e.g. a background connection-pool warmup query)
+  // (e.g. a background connection-pool warmup query)
   enhancedDatabaseReporting: false, // when true, includes query *parameter values*,
-                                     // not just the statement shape — a real PII/secret
-                                     // exposure risk, off by default for exactly that reason
+  // not just the statement shape — a real PII/secret
+  // exposure risk, off by default for exactly that reason
 });
 ```
 
@@ -280,7 +281,7 @@ new PgInstrumentation({
 `db.statement` by default captures the SQL text (parameterized form, e.g.
 `SELECT * FROM users WHERE id = $1` — placeholders, not literal values, for most SQL
 instrumentations). `enhancedDatabaseReporting: true` (available on some DB
-instrumentations) goes further and includes actual bound parameter *values* — which
+instrumentations) goes further and includes actual bound parameter _values_ — which
 can be customer PII, tokens, or anything else the query touched — and is off by
 default specifically because of that risk. Confirm this stays off (or is paired with
 an explicit scrubbing processor) before ever enabling it in a service handling
@@ -327,7 +328,7 @@ subscriber side.
 - `@opentelemetry/instrumentation-grpc` covers both gRPC client (`CLIENT` span) and
   server (`SERVER` span) sides, with context propagation over gRPC metadata (the gRPC
   equivalent of HTTP headers) handled automatically, same pattern as §2.5's HTTP case.
-- `@opentelemetry/instrumentation-graphql` adds spans *within* GraphQL execution
+- `@opentelemetry/instrumentation-graphql` adds spans _within_ GraphQL execution
   (per-resolver spans), layered on top of whatever HTTP/Express spans already wrap
   the GraphQL endpoint itself — it doesn't replace the HTTP-level span, it adds detail
   inside it.
@@ -382,6 +383,7 @@ deliberate about:**
   **hand-rolled consumer loops, or less-common message-queue clients without an
   existing instrumentation package, need this same discipline applied manually**, and
   it's easy to get wrong by assuming context "just works" the way it does for HTTP.
+
 - **Batch consumption** (many message-queue clients support pulling a batch of N
   messages and handing them to your code at once, e.g. Kafka's batch consumer mode)
   makes this sharper still: there is no single "the" trace for a batch of unrelated
@@ -441,18 +443,18 @@ services that may compile to either CJS or ESM depending on the consuming app's 
 A running list — extend during implementation as new ones surface, rather than
 treating this as exhaustive on day one:
 
-| # | Scenario | What actually happens | Reference |
-|---|---|---|---|
-| 1 | A library is a declared dependency but never actually called at runtime (e.g. `redis` installed for a rarely-used feature flag path) | Instrumentation hook registered, never fires, zero spans, zero runtime cost beyond fixed startup (§2.2) | §2.2 |
-| 2 | A library's version is bumped past what its instrumentation package supports | Instrumentation silently stops patching — no spans, no error, indistinguishable from case #1 from the outside | §2.3 |
-| 3 | Manual span created but `span.end()` never called on some code path | Span never exports (export happens at span end); silently missing from traces, not an error | §2.4 |
-| 4 | `recordException` called without `setStatus({code: ERROR})` | Span shows an exception event but overall status remains unset/OK — misleading in trace UIs that filter/color by status | §2.4 |
-| 5 | Incoming HTTP request has no `traceparent` header | New root span created — correct behavior, but reads as "trace starts abruptly here" and can look like a missing upstream hop when it's actually just an uninstrumented caller | §2.5 |
-| 6 | `enhancedDatabaseReporting`/Redis arg serialization left at defaults on a service touching sensitive data | Query parameter values / Redis command arguments captured verbatim in span attributes — real PII/secret exposure risk | §2.6 |
-| 7 | Redis used as a pub/sub bus, trace continuity expected across publish→subscribe | No standard auto-instrumentation propagates context over Redis pub/sub — appears as two disconnected traces unless manually bridged | §2.6 |
-| 8 | Consumer loop processes many queue messages without explicit per-message `context.with()` | Spans/log-context can bleed across messages if hand-rolled without following the instrumentation-internal pattern | §2.7 |
-| 9 | Batch message consumption (many messages, multiple origin traces, one handler invocation) | No single correct "parent" — Links, not parenting, is the semantically correct approach | §2.7 |
-| 10 | A DB pool/Redis client constructed at module load time, before SDK preload finishes | May capture unpatched method references depending on how that specific instrumentation patches (prototype vs per-instance) | §2.8 |
-| 11 | App ships as ESM (`"type": "module"`) | Standard `--require` CJS hook doesn't intercept `import` — needs the separate loader-hook flag, and per-instrumentation ESM support isn't universal | §2.9 |
-| 12 | Same call manually wrapped in a custom span *and* covered by an enabled auto-instrumentation | Two spans for the same operation (usually nested: auto-instrumentation's span becomes a child of the manual one, or vice versa depending on call order) — not wrong, but worth being intentional about rather than accidental double-tracing |  |
-| 13 | Very short-lived process (CLI tool, some FaaS invocations) where SDK startup cost (§2.2) is a meaningful fraction of total runtime | Fixed instrumentation-construction cost that's noise for a long-lived server becomes proportionally significant; worth trimming the instrumentation set (§2.2's selective-enable pattern) rather than using the full meta-package default | §2.2, §5.6 (Phase-1 primer) |
+| #   | Scenario                                                                                                                             | What actually happens                                                                                                                                                                                                                        | Reference                   |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| 1   | A library is a declared dependency but never actually called at runtime (e.g. `redis` installed for a rarely-used feature flag path) | Instrumentation hook registered, never fires, zero spans, zero runtime cost beyond fixed startup (§2.2)                                                                                                                                      | §2.2                        |
+| 2   | A library's version is bumped past what its instrumentation package supports                                                         | Instrumentation silently stops patching — no spans, no error, indistinguishable from case #1 from the outside                                                                                                                                | §2.3                        |
+| 3   | Manual span created but `span.end()` never called on some code path                                                                  | Span never exports (export happens at span end); silently missing from traces, not an error                                                                                                                                                  | §2.4                        |
+| 4   | `recordException` called without `setStatus({code: ERROR})`                                                                          | Span shows an exception event but overall status remains unset/OK — misleading in trace UIs that filter/color by status                                                                                                                      | §2.4                        |
+| 5   | Incoming HTTP request has no `traceparent` header                                                                                    | New root span created — correct behavior, but reads as "trace starts abruptly here" and can look like a missing upstream hop when it's actually just an uninstrumented caller                                                                | §2.5                        |
+| 6   | `enhancedDatabaseReporting`/Redis arg serialization left at defaults on a service touching sensitive data                            | Query parameter values / Redis command arguments captured verbatim in span attributes — real PII/secret exposure risk                                                                                                                        | §2.6                        |
+| 7   | Redis used as a pub/sub bus, trace continuity expected across publish→subscribe                                                      | No standard auto-instrumentation propagates context over Redis pub/sub — appears as two disconnected traces unless manually bridged                                                                                                          | §2.6                        |
+| 8   | Consumer loop processes many queue messages without explicit per-message `context.with()`                                            | Spans/log-context can bleed across messages if hand-rolled without following the instrumentation-internal pattern                                                                                                                            | §2.7                        |
+| 9   | Batch message consumption (many messages, multiple origin traces, one handler invocation)                                            | No single correct "parent" — Links, not parenting, is the semantically correct approach                                                                                                                                                      | §2.7                        |
+| 10  | A DB pool/Redis client constructed at module load time, before SDK preload finishes                                                  | May capture unpatched method references depending on how that specific instrumentation patches (prototype vs per-instance)                                                                                                                   | §2.8                        |
+| 11  | App ships as ESM (`"type": "module"`)                                                                                                | Standard `--require` CJS hook doesn't intercept `import` — needs the separate loader-hook flag, and per-instrumentation ESM support isn't universal                                                                                          | §2.9                        |
+| 12  | Same call manually wrapped in a custom span _and_ covered by an enabled auto-instrumentation                                         | Two spans for the same operation (usually nested: auto-instrumentation's span becomes a child of the manual one, or vice versa depending on call order) — not wrong, but worth being intentional about rather than accidental double-tracing |                             |
+| 13  | Very short-lived process (CLI tool, some FaaS invocations) where SDK startup cost (§2.2) is a meaningful fraction of total runtime   | Fixed instrumentation-construction cost that's noise for a long-lived server becomes proportionally significant; worth trimming the instrumentation set (§2.2's selective-enable pattern) rather than using the full meta-package default    | §2.2, §5.6 (Phase-1 primer) |

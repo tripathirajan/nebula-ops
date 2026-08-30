@@ -1,13 +1,14 @@
 # 7. What makes an OTel wrapper generic and reusable — concepts, tutorial, and scenarios
 
 This chapter is still about general principles — not `@nebula-ops` specifics — but
-framed toward "what would make *any* org's OTel wrapper actually reusable across many
+framed toward "what would make _any_ org's OTel wrapper actually reusable across many
 services," since that's the property this repo's package specs are trying to
 achieve. Still vendor/wrapper-neutral in spirit — the code below is illustrative of
-the *pattern*, not a preview of `@nebula-ops/otel`'s actual implementation (that's
+the _pattern_, not a preview of `@nebula-ops/otel`'s actual implementation (that's
 [`../package-specs/`](../package-specs/)'s job).
 
 **Official references used in this chapter:**
+
 - OTel JS API vs SDK design rationale: https://opentelemetry.io/docs/languages/js/instrumentation/#tracer
 - In-memory exporters for testing: https://github.com/open-telemetry/opentelemetry-js/blob/main/packages/opentelemetry-sdk-trace-base/src/export/InMemorySpanExporter.ts
 - Semantic conventions (why shared attribute naming matters org-wide): https://opentelemetry.io/docs/specs/semconv/
@@ -18,9 +19,15 @@ the *pattern*, not a preview of `@nebula-ops/otel`'s actual implementation (that
 
 ```ts
 const sdk = new NodeSDK({
-  resource: resourceFromAttributes({ 'service.name': 'checkout-service', 'deployment.environment': 'production' }),
+  resource: resourceFromAttributes({
+    'service.name': 'checkout-service',
+    'deployment.environment': 'production',
+  }),
   traceExporter: new OTLPTraceExporter({ url: 'https://otel-collector.internal:4318/v1/traces' }),
-  spanProcessor: new BatchSpanProcessor(exporter, { maxQueueSize: 2048, scheduledDelayMillis: 5000 }),
+  spanProcessor: new BatchSpanProcessor(exporter, {
+    maxQueueSize: 2048,
+    scheduledDelayMillis: 5000,
+  }),
   sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(0.1) }),
   instrumentations: [getNodeAutoInstrumentations()],
 });
@@ -30,7 +37,7 @@ const sdk = new NodeSDK({
 
 ```ts
 const sdk = new NodeSDK({
-  resource: resourceFromAttributes({ 'service.name': 'inventory-service', 'env': 'prod' }), // ← 'env', not 'deployment.environment' — typo'd during copy-paste, nobody caught it
+  resource: resourceFromAttributes({ 'service.name': 'inventory-service', env: 'prod' }), // ← 'env', not 'deployment.environment' — typo'd during copy-paste, nobody caught it
   traceExporter: new OTLPTraceExporter({ url: 'https://otel-collector.internal:4318/v1/traces' }),
   spanProcessor: new BatchSpanProcessor(exporter), // ← batch options dropped entirely during copy-paste, silently reverts to SDK defaults
   // sampler config forgotten entirely — this service samples 100% by default, unnoticed until someone asks why its trace volume is 10x checkout-service's
@@ -53,8 +60,8 @@ place the same mistakes can happen."
 
 ## 7.2 Config-driven, not code-driven, per-service variation
 
-Every service needs the *same shape* of setup (Resource, exporter, sampler, context
-manager, instrumentation set) with *different values* (service name, endpoint,
+Every service needs the _same shape_ of setup (Resource, exporter, sampler, context
+manager, instrumentation set) with _different values_ (service name, endpoint,
 sampling ratio, which instrumentations apply). A reusable wrapper's job is to make
 that variation entirely a config problem, not a code problem — a new service should
 be able to get fully-configured telemetry by supplying a config object/env vars, not
@@ -81,7 +88,9 @@ export function startNodeSdk(config: Partial<WrapperConfig>) {
     resource: buildResource(resolved), // always uses 'deployment.environment', never 'env' — not a per-call-site decision anymore
     traceExporter: new OTLPTraceExporter({ url: resolved.endpoint, headers: resolved.headers }),
     spanProcessor: new BatchSpanProcessor(exporter, DEFAULT_BATCH_OPTIONS), // can't be silently dropped by a copy-paste omission — it's not optional in the wrapper's code path
-    sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(resolved.sampling.ratio) }),
+    sampler: new ParentBasedSampler({
+      root: new TraceIdRatioBasedSampler(resolved.sampling.ratio),
+    }),
     instrumentations: [getNodeAutoInstrumentations()],
   });
   sdk.start();
@@ -98,12 +107,12 @@ something each copy-paste has to re-earn."
 ## 7.3 Depend on the API, implement against the SDK, expose neither raw
 
 Application/library code should only ever need `@opentelemetry/api` types (ch. 1
-§1.8). A reusable wrapper sits *between* the raw SDK (which it configures) and
+§1.8). A reusable wrapper sits _between_ the raw SDK (which it configures) and
 application code (which it hands a simplified surface to) — this means:
 
 - The wrapper's public exports should be small, opinionated functions
   (`startNodeSdk(config)`, not "here are 15 SDK classes, assemble them yourself").
-- Where the wrapper *does* re-export raw OTel API pieces (`trace`, `context`), it
+- Where the wrapper _does_ re-export raw OTel API pieces (`trace`, `context`), it
   should be exactly the API package's own exports, not a modified/renamed version —
   so application code written against "the OTel API" isn't secretly locked into a
   wrapper-specific dialect that diverges from OTel docs/examples/community knowledge.
@@ -111,12 +120,12 @@ application code (which it hands a simplified surface to) — this means:
 ## 7.4 Escape hatches — flexibility without losing the default's safety
 
 ```ts
-export interface NebulaNodeSdkOptions extends Partial<NebulaOtelConfig> {
+export interface NodeSdkOptions extends Partial<OtelConfig> {
   traceExporter?: SpanExporter; // override the default OTLP exporter entirely
   instrumentations?: Instrumentation[]; // override the default instrumentation set entirely
 }
 
-export function startNodeSdk(options: NebulaNodeSdkOptions = {}) {
+export function startNodeSdk(options: NodeSdkOptions = {}) {
   const resolved = resolveConfig(options);
   const sdk = new NodeSDK({
     resource: buildResource(resolved),
@@ -154,9 +163,13 @@ literally cannot accidentally import something environment-specific.
 ```ts
 // otel-core/src/config/resolve.ts — must compile and run correctly in BOTH Node and
 // a browser bundle. This is enforceable, not just a convention to remember:
-export function resolveConfig(overrides: Partial<NebulaOtelConfig>, source: ConfigSource = {}): NebulaOtelConfig {
+export function resolveConfig(
+  overrides: Partial<OtelConfig>,
+  source: ConfigSource = {},
+): OtelConfig {
   return {
-    serviceName: overrides.serviceName ?? (source.serviceName as string) ?? throwMissingServiceName(),
+    serviceName:
+      overrides.serviceName ?? (source.serviceName as string) ?? throwMissingServiceName(),
     endpoint: overrides.endpoint ?? (source.endpoint as string),
     // ... pure data transformation, no fs/http/window/document anywhere in this file
   };
@@ -195,7 +208,7 @@ via the same config mechanism (§7.4), because "sensible for most services" is n
 "correct for every service" (a high-throughput service may need a larger batch
 queue; a low-traffic internal tool may want 100% sampling even in production).
 Similarly, the default instrumentation set (§2.2's auto-instrumentations-node preset,
-ch. 3's fetch/XHR/document-load for web) should be a *starting point*, not the only
+ch. 3's fetch/XHR/document-load for web) should be a _starting point_, not the only
 option — a service using a database library outside the default preset, or wanting
 to disable an instrumentation that's too noisy/expensive for its traffic pattern
 (ch. 6 §6.1), needs a config-level way to add/remove instrumentations without
@@ -224,8 +237,13 @@ provider.register();
 // ... run code under test ...
 
 const spans = exporter.getFinishedSpans();
-const match = spans.find(s => s.name === 'orders.create' && s.attributes['order.total_cents'] === 4200);
-if (!match) throw new Error(`Expected span 'orders.create' with order.total_cents=4200, got: ${JSON.stringify(spans.map(s => s.name))}`);
+const match = spans.find(
+  (s) => s.name === 'orders.create' && s.attributes['order.total_cents'] === 4200,
+);
+if (!match)
+  throw new Error(
+    `Expected span 'orders.create' with order.total_cents=4200, got: ${JSON.stringify(spans.map((s) => s.name))}`,
+  );
 ```
 
 **With a shared testing package** — the payoff, made concrete:
@@ -260,7 +278,7 @@ re-test against) an unrelated release.
 ```jsonc
 // A Node-only bugfix changeset — only otel-node's version bumps
 {
-  "otel-node": "patch"
+  "otel-node": "patch",
 }
 ```
 
@@ -270,8 +288,8 @@ vs. a lockstep scheme where the same fix would force:
 {
   "otel-core": "patch",
   "otel-node": "patch",
-  "otel-web": "patch",   // ← bumped and re-released even though nothing in it changed
-  "otel-react": "patch"  // ← same
+  "otel-web": "patch", // ← bumped and re-released even though nothing in it changed
+  "otel-react": "patch", // ← same
 }
 ```
 
@@ -281,17 +299,17 @@ exact versions rather than ranges — has to actually re-test and redeploy their
 frontend for a change that touched zero frontend-relevant code. Independent
 versioning (this repo's actual choice, [ADR 0001](../adr/0001-monorepo-without-nx.md))
 means that Node bugfix's blast radius is exactly the services that depend on
-`otel-node`, and nothing else. This is a *design* property, not only a tooling
+`otel-node`, and nothing else. This is a _design_ property, not only a tooling
 choice — it's the reason the frozen package boundaries
 (`otel-core`/`otel-node`/`otel-web`/...) matter: each boundary is also an independent
 blast radius for a breaking change.
 
 ## 7.9 Edge cases and grey areas checklist
 
-| # | Scenario | What actually happens | Reference |
-|---|---|---|---|
-| 1 | A service needs a non-OTLP exporter (e.g. a vendor-proprietary one) | Works via the `traceExporter` override escape hatch (§7.4) — the wrapper's opinionated default doesn't block this, but that service's setup diverges from the norm in a way worth documenting in that service's own README, since the wrapper's shared guarantees (consistent batching defaults, etc.) may not all carry over depending on what the custom exporter/processor combination does | §7.4 |
-| 2 | A contributor adds a new field to `otel-core`'s config schema that happens to read `process.env` directly "just this once, for convenience" | Passes code review if the reviewer doesn't specifically check for it; only reliably caught by the lint rule + browser-bundle smoke test (§7.5) — a real argument for keeping those checks in CI, not just in a code-review checklist | §7.5 |
-| 3 | A service overrides `instrumentations` entirely (§7.4) and forgets to include `HttpInstrumentation` | That service silently loses all HTTP-level auto-instrumentation, including the wrapper's own sensible defaults — an override replaces, not merges with, the default array | §7.4 |
-| 4 | Two services' `otel-testing`-based tests both import the same in-memory exporter singleton without resetting between tests | Spans from test A leak into test B's assertions — this is exactly why `resetExporters()` (this repo's [otel-testing spec](../package-specs/otel-testing.md)) exists as an explicit, documented `afterEach`/`beforeEach` requirement, not an implementation detail users are expected to intuit | §7.7 |
-| 5 | A package's public API surface changes in a way that isn't backward compatible, but ships as a `patch` changeset by mistake | Downstream services taking automatic patch-level upgrades break unexpectedly — the changeset bump level is a human judgment call the tooling can't fully verify; worth a lightweight API-diff check (e.g. `api-extractor` or similar) as a CI backstop if this becomes a recurring mistake, though not necessarily needed from day one | §7.8 |
+| #   | Scenario                                                                                                                                    | What actually happens                                                                                                                                                                                                                                                                                                                                                                          | Reference |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| 1   | A service needs a non-OTLP exporter (e.g. a vendor-proprietary one)                                                                         | Works via the `traceExporter` override escape hatch (§7.4) — the wrapper's opinionated default doesn't block this, but that service's setup diverges from the norm in a way worth documenting in that service's own README, since the wrapper's shared guarantees (consistent batching defaults, etc.) may not all carry over depending on what the custom exporter/processor combination does | §7.4      |
+| 2   | A contributor adds a new field to `otel-core`'s config schema that happens to read `process.env` directly "just this once, for convenience" | Passes code review if the reviewer doesn't specifically check for it; only reliably caught by the lint rule + browser-bundle smoke test (§7.5) — a real argument for keeping those checks in CI, not just in a code-review checklist                                                                                                                                                           | §7.5      |
+| 3   | A service overrides `instrumentations` entirely (§7.4) and forgets to include `HttpInstrumentation`                                         | That service silently loses all HTTP-level auto-instrumentation, including the wrapper's own sensible defaults — an override replaces, not merges with, the default array                                                                                                                                                                                                                      | §7.4      |
+| 4   | Two services' `otel-testing`-based tests both import the same in-memory exporter singleton without resetting between tests                  | Spans from test A leak into test B's assertions — this is exactly why `resetExporters()` (this repo's [otel-testing spec](../package-specs/otel-testing.md)) exists as an explicit, documented `afterEach`/`beforeEach` requirement, not an implementation detail users are expected to intuit                                                                                                 | §7.7      |
+| 5   | A package's public API surface changes in a way that isn't backward compatible, but ships as a `patch` changeset by mistake                 | Downstream services taking automatic patch-level upgrades break unexpectedly — the changeset bump level is a human judgment call the tooling can't fully verify; worth a lightweight API-diff check (e.g. `api-extractor` or similar) as a CI backstop if this becomes a recurring mistake, though not necessarily needed from day one                                                         | §7.8      |

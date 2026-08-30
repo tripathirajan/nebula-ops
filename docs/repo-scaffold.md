@@ -87,8 +87,8 @@ nebula-ops/                          # repo root (this directory)
 
 ```yaml
 packages:
-  - "packages/*"
-  - "examples/*"
+  - 'packages/*'
+  - 'examples/*'
 ```
 
 ## 3. `turbo.json`
@@ -122,6 +122,7 @@ packages:
 ```
 
 Task graph notes:
+
 - `build` depends on `^build` — a package's own build waits for all of its workspace
   dependencies to build first (e.g. `otel-node`'s build waits on `otel-core`'s build).
 - `typecheck` also depends on `^build` because `otel-node`/`otel-web` typecheck against
@@ -176,13 +177,13 @@ CJS via `tsup`, `.d.ts` types) — with `otel-core`'s `exports` field carrying n
 
 ## 5. Build/test/lint pipeline
 
-| Task | Command | What it does |
-|---|---|---|
-| `build` | `turbo run build` | Each package's `tsup` build (ESM + CJS + `.d.ts`), ordered by `^build`. |
-| `typecheck` | `turbo run typecheck` | `tsc --noEmit` per package against `tsconfig.base.json`, strict mode. |
-| `lint` | `turbo run lint` | ESLint per package, including the `otel-core` environment-agnostic import-restriction rule (§4 of [`docs/architecture.md`](architecture.md)). |
-| `test` | `turbo run test` | Vitest per package (unit tests; `otel-testing`-backed assertions once M4 lands). |
-| `clean` | `turbo run clean` | Removes `dist/`, `coverage/`, and turbo cache markers per package. |
+| Task        | Command               | What it does                                                                                                                                  |
+| ----------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build`     | `turbo run build`     | Each package's `tsup` build (ESM + CJS + `.d.ts`), ordered by `^build`.                                                                       |
+| `typecheck` | `turbo run typecheck` | `tsc --noEmit` per package against `tsconfig.base.json`, strict mode.                                                                         |
+| `lint`      | `turbo run lint`      | ESLint per package, including the `otel-core` environment-agnostic import-restriction rule (§4 of [`docs/architecture.md`](architecture.md)). |
+| `test`      | `turbo run test`      | Vitest per package (unit tests; `otel-testing`-backed assertions once M4 lands).                                                              |
+| `clean`     | `turbo run clean`     | Removes `dist/`, `coverage/`, and turbo cache markers per package.                                                                            |
 
 Every task is cached by Turborepo based on file-content hashes of each package's
 inputs, so an unrelated `otel-web` change doesn't invalidate `otel-core`'s cached
@@ -191,6 +192,7 @@ inputs, so an unrelated `otel-web` change doesn't invalidate `otel-core`'s cache
 ## 6. CI outline
 
 **On pull request** (`.github/workflows/ci.yml`):
+
 1. Checkout, setup pnpm + Node 20, `pnpm install --frozen-lockfile`.
 2. `pnpm turbo run lint typecheck test build` (single Turborepo invocation covering
    all four tasks, leveraging its cache).
@@ -205,12 +207,13 @@ inputs, so an unrelated `otel-web` change doesn't invalidate `otel-core`'s cache
    extra safety net that the packages work end-to-end, not just in unit tests.
 
 **On push to the default branch** (`.github/workflows/release.yml`):
+
 1. Checkout, setup pnpm + Node 20, `pnpm install --frozen-lockfile`.
 2. Run the `changesets/action` GitHub Action:
    - If there are pending changesets, it opens/updates a "Version Packages" release PR
      (running `changeset version`, bumping affected package versions, updating
      CHANGELOGs, committing).
-   - If that release PR is merged (i.e. this run *is* the merge of a version-bump
+   - If that release PR is merged (i.e. this run _is_ the merge of a version-bump
      commit with no new pending changesets), it runs `pnpm build` then
      `changeset publish`, which publishes any packages whose `package.json` version
      doesn't yet exist on the npm registry, tags the commit, and pushes git tags.

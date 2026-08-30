@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Build, lint, typecheck, test (with coverage)
+        run: pnpm turbo run lint typecheck test build -- --coverage
+
+      - name: otel-core browser-safety smoke build
+        run: node scripts/verify-otel-core-browser-safe.mjs
+
+      - name: Changeset status
+        if: github.event_name == 'pull_request'
+        run: pnpm changeset status --since=origin/main
+
+  # examples/node-app's own `lint`/`typecheck` scripts are already picked up by the
+  # `pnpm turbo run lint typecheck test build` step above — turbo runs a task in
+  # every package that defines it, no separate job needed. It has no `test`/`build`
+  # script (it's a runnable demo, not a published package — see .changeset/config.json's
+  # `ignore: ["examples/*"]`), so those two tasks simply no-op for it.

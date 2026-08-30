@@ -20,6 +20,7 @@ of a spec is how the frozen-API-surface discipline this repo relies on breaks do
 
 2. **Create the directory structure** matching
    [`docs/repo-scaffold.md`](../../../docs/repo-scaffold.md) §1:
+
    ```
    packages/<name>/
      src/
@@ -52,6 +53,7 @@ of a spec is how the frozen-API-surface discipline this repo relies on breaks do
 
 6. **`vitest.config.ts`** — set coverage thresholds to 100% for branches, functions,
    lines, and statements (per `CLAUDE.md`'s coverage bar):
+
    ```ts
    import { defineConfig } from 'vitest/config';
    export default defineConfig({
@@ -63,6 +65,7 @@ of a spec is how the frozen-API-surface discipline this repo relies on breaks do
      },
    });
    ```
+
    If `otel-core`, additionally verify no browser/Node-specific test setup leaks in
    here — tests for `otel-core` should run under plain Node with no jsdom/browser
    environment, since the package itself must not assume one.
@@ -79,7 +82,7 @@ of a spec is how the frozen-API-surface discipline this repo relies on breaks do
    §7.5 for the exact lint rule shape.
 
 9. **Verify the scaffold builds clean before writing real logic**: run
-   `pnpm --filter @nebula-ops/<name> build lint typecheck test` — an empty package
+   `pnpm turbo run build lint typecheck test --filter=@nebula-ops/<name>` — an empty package
    with just the barrel file and no real exports yet should still pass all four
    (test can be a single trivial passing test as a placeholder, coverage thresholds
    apply once real code exists).

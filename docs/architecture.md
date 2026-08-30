@@ -11,11 +11,13 @@ graph TD
     web["@nebula-ops/otel-web"]
     react["@nebula-ops/otel-react (stretch)"]
     testing["@nebula-ops/otel-testing (stretch)"]
+    fastify["@nebula-ops/otel-fastify"]
 
     api -.peer.-> core
     core --> node
     core --> web
     web --> react
+    node --> fastify
     api -.peer.-> testing
 
     classDef stretch stroke-dasharray: 5 5;
@@ -32,6 +34,13 @@ and checked in CI — see [`docs/repo-scaffold.md`](repo-scaffold.md)):
   (`fs`, `http`, `async_hooks` is the one deliberate exception, see §4 below), no
   browser globals (`window`, `document`, `fetch`).
 - `otel-react` depends on `otel-web` only (never on `otel-node`).
+- `otel-fastify` depends on `otel-node` only (Fastify is Node-only, and it needs
+  `otel-node`'s `createPinoMixin`/re-exported `trace`/`context`/`SpanStatusCode` —
+  see [`docs/package-specs/otel-fastify.md`](package-specs/otel-fastify.md)'s "why
+  otel-node as the base" note). This establishes a new, second-level dependency
+  pattern for framework-specific Node integrations — depend on `otel-node` (the
+  Node runtime-integration layer), not directly on `otel-core` — that any future
+  Node-framework package (`otel-koa`, `otel-hapi`, etc.) should follow the same way.
 - `otel-testing` depends on `@opentelemetry/api` and `@opentelemetry/sdk-trace-base`
   in-memory exporters only — it is dependency-graph-neutral (usable alongside either
   `otel-node` or `otel-web` in a consuming app's test suite) and is not depended on by
@@ -48,18 +57,18 @@ Phase 2 begins.
 
 ```ts
 // Config
-export interface NebulaOtelConfig {
+export interface OtelConfig {
   serviceName: string;
   serviceVersion?: string;
   environment?: string;
-  endpoint?: string;              // OTLP endpoint, defaults from env
+  endpoint?: string; // OTLP endpoint, defaults from env
   headers?: Record<string, string>;
   resourceAttributes?: Record<string, string | number | boolean>;
   sampling?: { ratio?: number };
 }
 
-export function resolveConfig(overrides?: Partial<NebulaOtelConfig>): NebulaOtelConfig;
-export function buildResource(config: NebulaOtelConfig): Resource; // re-exports @opentelemetry/resources Resource
+export function resolveConfig(overrides?: Partial<OtelConfig>): OtelConfig;
+export function buildResource(config: OtelConfig): Resource; // re-exports @opentelemetry/resources Resource
 
 // Log-context correlation (environment-agnostic)
 export interface LogContext {
@@ -71,31 +80,33 @@ export interface LogContext {
 
 export function getActiveLogContext(): LogContext;
 export function runWithLogContext<T>(context: LogContext, fn: () => T): T;
-export function bindLogContext<Args extends unknown[], R>(fn: (...args: Args) => R): (...args: Args) => R;
+export function bindLogContext<Args extends unknown[], R>(
+  fn: (...args: Args) => R,
+): (...args: Args) => R;
 
 // Attribute / semantic-convention helpers
-export const NebulaAttributes: {
+export const OtelAttributes: {
   readonly SERVICE_NAME: 'service.name';
   readonly DEPLOYMENT_ENVIRONMENT: 'deployment.environment';
   // ...wraps @opentelemetry/semantic-conventions, adds nebula-ops-specific keys
 };
 
 // Config validation
-export function validateConfig(config: unknown): NebulaOtelConfig; // throws NebulaConfigError
-export class NebulaConfigError extends Error {}
+export function validateConfig(config: unknown): OtelConfig; // throws ConfigError
+export class ConfigError extends Error {}
 ```
 
 ### `@nebula-ops/otel-node`
 
 ```ts
-export interface NebulaNodeSdkOptions extends Partial<NebulaOtelConfig> {
+export interface NodeSdkOptions extends Partial<OtelConfig> {
   instrumentations?: Instrumentation[]; // default: auto-instrumentations-node preset
-  traceExporter?: SpanExporter;         // default: OTLP over gRPC or HTTP per config
+  traceExporter?: SpanExporter; // default: OTLP over gRPC or HTTP per config
   metricReader?: MetricReader;
   logRecordProcessor?: LogRecordProcessor;
 }
 
-export function startNodeSdk(options?: NebulaNodeSdkOptions): NodeSDK;
+export function startNodeSdk(options?: NodeSdkOptions): NodeSDK;
 export function shutdownNodeSdk(sdk: NodeSDK): Promise<void>;
 
 // Logger bindings
@@ -109,13 +120,13 @@ export { trace, context, metrics } from '@opentelemetry/api';
 ### `@nebula-ops/otel-web`
 
 ```ts
-export interface NebulaWebTracerOptions extends Partial<NebulaOtelConfig> {
+export interface WebTracerOptions extends Partial<OtelConfig> {
   instrumentations?: Instrumentation[]; // default: fetch + XHR + document-load
-  exporter?: SpanExporter;              // default: OTLP/HTTP
+  exporter?: SpanExporter; // default: OTLP/HTTP
   propagateTraceHeaderCorsUrls?: (string | RegExp)[];
 }
 
-export function initWebTracer(options?: NebulaWebTracerOptions): WebTracerProvider;
+export function initWebTracer(options?: WebTracerOptions): WebTracerProvider;
 export function shutdownWebTracer(provider: WebTracerProvider): Promise<void>;
 
 // web-vitals bridge
@@ -151,7 +162,7 @@ in [`docs/package-specs/`](package-specs/).
 
 ## 3. Config shape owned by `otel-core`
 
-`otel-core` owns the single `NebulaOtelConfig` shape that both `otel-node` and
+`otel-core` owns the single `OtelConfig` shape that both `otel-node` and
 `otel-web` build on top of (each extending it with environment-specific options, never
 redefining the shared fields). Resolution order (highest to lowest precedence):
 
@@ -160,15 +171,27 @@ redefining the shared fields). Resolution order (highest to lowest precedence):
    e.g. via bundler `define`, since browsers have no `process.env` at runtime).
 3. Defaults.
 
-| Config field | Env var (Node) | Notes |
-|---|---|---|
-| `serviceName` | `OTEL_SERVICE_NAME` | Required; no default. |
-| `serviceVersion` | `NEBULA_OTEL_SERVICE_VERSION` | Falls back to consuming app's `package.json` version when available (Node only, best-effort). |
-| `environment` | `NEBULA_OTEL_ENVIRONMENT` | e.g. `production`, `staging`, `local`. Maps to `deployment.environment` resource attribute. |
-| `endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OTel env var, honored directly. Assumes an OpenTelemetry Collector (or OTLP-compatible backend) is reachable at this address in production — this repo's code does not implement Collector-side concerns (tail sampling, durable buffering) itself; see [ADR 0002 #2](adr/0002-open-questions-resolutions.md#2-tail-based-sampling--collector-deployment-assumption). |
-| `headers` | `OTEL_EXPORTER_OTLP_HEADERS` | Parsed from the standard `k1=v1,k2=v2` format. **Never a source of secrets committed to the repo** — always supplied by the consuming app's own env/secret manager. |
-| `resourceAttributes` | `OTEL_RESOURCE_ATTRIBUTES` | Standard OTel env var (`k1=v1,k2=v2`), merged with `NebulaAttributes` and explicit overrides. |
-| `sampling.ratio` | `NEBULA_OTEL_SAMPLING_RATIO` | 0–1, default `1.0` (100%) in every environment — deliberately not pre-guessed lower for production since this is a new project with no traffic baseline to size a default against; each service overrides once its volume is known. See [ADR 0002 #2](adr/0002-open-questions-resolutions.md#2-tail-based-sampling--collector-deployment-assumption). |
+| Config field         | Env var (Node)                | Notes                                                                                                                                                                                                                                                                                                                                                                                                                |
+| -------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serviceName`        | `OTEL_SERVICE_NAME`           | Required; no default. Genuinely standard OTel env var.                                                                                                                                                                                                                                                                                                                                                               |
+| `serviceVersion`     | `OTEL_SERVICE_VERSION`        | Falls back to consuming app's `package.json` version when available (Node only, best-effort). **Not** an official OTel var — see the naming note below.                                                                                                                                                                                                                                                              |
+| `environment`        | `OTEL_ENVIRONMENT`            | e.g. `production`, `staging`, `local`. Maps to `deployment.environment` resource attribute. **Not** an official OTel var — see the naming note below.                                                                                                                                                                                                                                                                |
+| `endpoint`           | `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OTel env var, honored directly. Assumes an OpenTelemetry Collector (or OTLP-compatible backend) is reachable at this address in production — this repo's code does not implement Collector-side concerns (tail sampling, durable buffering) itself; see [ADR 0002 #2](adr/0002-open-questions-resolutions.md#2-tail-based-sampling--collector-deployment-assumption).                                       |
+| `headers`            | `OTEL_EXPORTER_OTLP_HEADERS`  | Parsed from the standard `k1=v1,k2=v2` format. **Never a source of secrets committed to the repo** — always supplied by the consuming app's own env/secret manager.                                                                                                                                                                                                                                                  |
+| `resourceAttributes` | `OTEL_RESOURCE_ATTRIBUTES`    | Standard OTel env var (`k1=v1,k2=v2`), merged with `OtelAttributes` and explicit overrides.                                                                                                                                                                                                                                                                                                                          |
+| `sampling.ratio`     | `OTEL_SAMPLING_RATIO`         | 0–1, default `1.0` (100%) in every environment — deliberately not pre-guessed lower for production since this is a new project with no traffic baseline to size a default against; each service overrides once its volume is known. **Not** an official OTel var — see the naming note below. See also [ADR 0002 #2](adr/0002-open-questions-resolutions.md#2-tail-based-sampling--collector-deployment-assumption). |
+
+**Env var naming note:** `OTEL_SERVICE_VERSION`, `OTEL_ENVIRONMENT`, and
+`OTEL_SAMPLING_RATIO` are this project's own config, not part of the OpenTelemetry
+spec (only `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_*`, and
+`OTEL_RESOURCE_ATTRIBUTES` above are genuinely standard). They deliberately use a
+bare `OTEL_` prefix rather than `NEBULA_OTEL_` for a shorter, more generic-looking
+name — a decision made explicitly, trading a small risk (squatting on a prefix the
+OTel spec reserves for its own vars, with a remote chance of colliding with a
+same-named official var added later) for naming consistency with the real standard
+vars beside them. If that risk becomes a real problem, revisit before any 1.0
+release — env var names are part of the public contract once services depend on
+them, unlike most other config defaults in this table.
 
 `otel-node` reads Node env vars directly. `otel-web` never reads `process.env` at
 runtime — browser config values must be explicitly passed in (typically injected at
@@ -187,11 +210,12 @@ interface over a pluggable `ContextManager`). `otel-core` does **not** import
 `AsyncLocalStorageContextManager` (Node-only) and `otel-web` for installing the
 zone/stack-based context manager appropriate for browsers, both against the same
 `otel-core` `LogContext` helpers. This is what "AsyncLocalStorage + OTel context API"
-in the brief means in practice: the *API* (`otel-core`) is environment-agnostic; the
-*ContextManager implementation* is supplied by the environment-specific package.
+in the brief means in practice: the _API_ (`otel-core`) is environment-agnostic; the
+_ContextManager implementation_ is supplied by the environment-specific package.
 
 Verification approach (detailed in [`docs/repo-scaffold.md`](repo-scaffold.md) CI
 outline):
+
 - `otel-core`'s `package.json` `exports` field has no `browser` or `node`-conditional
   entries — a single entry point, proving it doesn't need environment branching.
 - A lint rule / dependency-check script (e.g. `depcheck` + a custom ESLint
@@ -208,7 +232,7 @@ local build/test) in every `@nebula-ops/*` package that touches OTel types (`ote
 `otel-node`, `otel-web`, `otel-react`, `otel-testing`). Rationale:
 
 - `@opentelemetry/api` uses a global registration pattern (`trace.setGlobalTracerProvider`,
-  etc.). If `otel-core` and `otel-node` each bundled or depended on *their own* copy of
+  etc.). If `otel-core` and `otel-node` each bundled or depended on _their own_ copy of
   `@opentelemetry/api`, a consuming app could end up with two API instances that don't
   share global state — spans created via one wouldn't be visible to the other. Peer-depending
   forces a single shared instance resolved from the consuming app's `node_modules`.

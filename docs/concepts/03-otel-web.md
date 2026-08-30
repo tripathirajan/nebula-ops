@@ -10,6 +10,7 @@ integration patterns and gotchas (StrictMode, concurrent rendering, SSR/hydratio
 layered on top of everything here.
 
 **Official references used throughout this chapter:**
+
 - Browser getting-started guide: https://opentelemetry.io/docs/languages/js/getting-started/browser/
 - Instrumentation concepts: https://opentelemetry.io/docs/languages/js/instrumentation/
 - Context propagation (W3C Trace Context): https://opentelemetry.io/docs/languages/js/propagation/
@@ -28,8 +29,8 @@ Node's story (ch. 2) rests on three things the browser doesn't have: a module ca
 to monkey-patch (`require`), a built-in async-local-storage primitive
 (`AsyncLocalStorage`), and a same-network-trust relationship with its export target.
 Every section below exists because of one of those three gaps — keep them in mind as
-you read, since they explain *why* the browser API looks the way it does, not just
-*what* it does.
+you read, since they explain _why_ the browser API looks the way it does, not just
+_what_ it does.
 
 ## 3.2 Minimal bootstrap, annotated
 
@@ -52,7 +53,9 @@ import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 const provider = new WebTracerProvider({
   resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: 'checkout-web' }),
   spanProcessors: [
-    new BatchSpanProcessor(new OTLPTraceExporter({ url: 'https://otel.internal.example.com/v1/traces' })),
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({ url: 'https://otel.internal.example.com/v1/traces' }),
+    ),
   ],
 });
 
@@ -76,7 +79,7 @@ registerInstrumentations({
 Note the structural difference from Node's bootstrap (§2.1 of ch. 2): there's no
 single `NodeSDK`-equivalent convenience class in wide use — `WebTracerProvider`,
 `registerInstrumentations`, and the `ContextManager` are wired up individually. This
-is a large part of *why* a wrapper package (`otel-web`) earns its keep here more than
+is a large part of _why_ a wrapper package (`otel-web`) earns its keep here more than
 almost anywhere else in this project — see [`08-why-this-layer.md`](08-why-this-layer.md).
 
 ## 3.3 Auto-instrumentation for unused browser APIs — same question as ch. 2, different mechanism
@@ -87,7 +90,7 @@ never triggers `DocumentLoadInstrumentation`'s events?
 
 The mechanism is different from Node's lazy require-hook, and it matters:
 
-- **`FetchInstrumentation`/`XMLHttpRequestInstrumentation` patch a *global*
+- **`FetchInstrumentation`/`XMLHttpRequestInstrumentation` patch a _global_
   (`window.fetch`, `XMLHttpRequest.prototype.open`/`send`) immediately and
   unconditionally at `registerInstrumentations()` time** — unlike Node's
   require-hook, there's no "only patches if the module gets loaded" laziness,
@@ -95,7 +98,7 @@ The mechanism is different from Node's lazy require-hook, and it matters:
   exists as a global the moment the page loads. So enabling `XMLHttpRequestInstrumentation`
   on a fetch-only page costs a wrapped-but-never-invoked prototype method — negligible
   runtime cost (the wrapper function exists but the original code path a page's own
-  `fetch`-only code takes never touches `XMLHttpRequest` at all), but it *is* extra
+  `fetch`-only code takes never touches `XMLHttpRequest` at all), but it _is_ extra
   JS shipped to the browser bundle (§3.3 bundle-size note below), which is a cost
   Node's server-side "extra dependency weight" analog doesn't share the same severity
   of — browser bundle size directly costs the end user download time/parse time on
@@ -113,7 +116,9 @@ The mechanism is different from Node's lazy require-hook, and it matters:
 // A fetch-only SPA with client-side routing (no full page reloads after first load)
 registerInstrumentations({
   instrumentations: [
-    new FetchInstrumentation({ propagateTraceHeaderCorsUrls: [/^https:\/\/api\.internal\.example\.com/] }),
+    new FetchInstrumentation({
+      propagateTraceHeaderCorsUrls: [/^https:\/\/api\.internal\.example\.com/],
+    }),
     // XMLHttpRequestInstrumentation omitted — this app only uses fetch
     new DocumentLoadInstrumentation(), // still worth keeping — one-time initial-load spans are usually valuable
   ],
@@ -124,7 +129,7 @@ Unlike Node's meta-package (`getNodeAutoInstrumentations()` with 40+ libraries a
 per-instrumentation `{ enabled: false }` toggle), there is no browser meta-package —
 you import and register only the instrumentation classes you want, so "not using it"
 in the browser world defaults to "not importing it," not "imported but disabled."
-This is generally a cleaner default than Node's, precisely *because* bundle size is a
+This is generally a cleaner default than Node's, precisely _because_ bundle size is a
 real, user-facing cost here in a way Node's server-side dependency footprint isn't.
 
 ## 3.4 Context propagation: Zone vs Stack, with actual code and actual failure cases
@@ -138,7 +143,7 @@ provider.register({ contextManager: new ZoneContextManager() });
 
 Requires `zone.js` (pulled in transitively by `@opentelemetry/context-zone`) to be
 loaded, which patches `setTimeout`, `Promise`, `addEventListener`, and other async
-browser primitives globally. Once installed, context correctly follows *any* async
+browser primitives globally. Once installed, context correctly follows _any_ async
 code path through those patched primitives — including plain application code the
 SDK never explicitly wrapped, which is the main advantage over Stack (§ below).
 
@@ -209,7 +214,7 @@ setTimeout(
     const child = tracer.startSpan('dashboard.render_widgets'); // correctly parented now
     child.end();
   }),
-  0
+  0,
 );
 ```
 
@@ -245,7 +250,7 @@ the concrete, production-breaking version of the general CORS point in the earli
 overview — worth testing explicitly (a preflight check against the target origin,
 not just "does the trace show up") before adding any new origin to this list.
 
-**What happens if you *don't* allow-list an origin that's actually yours:** the
+**What happens if you _don't_ allow-list an origin that's actually yours:** the
 request still works completely normally (no header is added, so no CORS-header
 consideration is triggered at all) — it just doesn't carry trace context, so the
 downstream service's inbound span becomes an unlinked root span instead of a child.
@@ -257,12 +262,12 @@ allow-list entry.
 
 Worth stating explicitly since it's a natural question carried over from ch. 2: the
 browser has no `SpanKind.SERVER` role in normal use — a browser page doesn't receive
-inbound instrumented requests the way a Node service does (it *is* the client for
+inbound instrumented requests the way a Node service does (it _is_ the client for
 every network call it makes: `fetch`/`XHR` to your APIs, third-party scripts, etc.).
 The closest browser analog to "inbound" is **document load itself** — the page being
 navigated to — which `DocumentLoadInstrumentation` captures as its own span tree
 (navigation timing, resource timing) rather than as a `SERVER` span, because there's
-no request *handler* on the browser side to instrument; the browser is the recipient
+no request _handler_ on the browser side to instrument; the browser is the recipient
 of a document, not a request-processing server.
 
 **Outbound** is the entire surface: every `fetch`/`XHR` call gets a `SpanKind.CLIENT`
@@ -320,7 +325,7 @@ last-gasp delivery, the exporter needs to use `navigator.sendBeacon` specificall
 (some OTLP HTTP exporter configurations/versions support a beacon-based transport
 mode; check the specific exporter package version in use, since this isn't
 universal across all OTLP HTTP exporter implementations) — `forceFlush` alone
-reduces the *window* for data loss but doesn't eliminate it the way a true
+reduces the _window_ for data loss but doesn't eliminate it the way a true
 beacon-based transport does, per the MDN reference above on why `sendBeacon` exists
 specifically for this use case.
 
@@ -376,7 +381,7 @@ have a server-side analog in the same way:
   browser calls directly, unlike a Node service's Collector endpoint which usually
   sits inside a private network reachable only from other internal services. This
   means the browser-facing OTLP endpoint needs to be something safe to expose to
-  *any* user of the app: rate-limited (a malicious or buggy client shouldn't be able
+  _any_ user of the app: rate-limited (a malicious or buggy client shouldn't be able
   to flood it), unable to submit telemetry that corrupts or spoofs other tenants'
   data, and built with no assumption of network-level trust the way an internal
   Collector endpoint might have. This is a materially different security posture
@@ -393,15 +398,15 @@ have a server-side analog in the same way:
 
 ## 3.11 Edge cases and grey areas checklist
 
-| # | Scenario | What actually happens | Reference |
-|---|---|---|---|
-| 1 | Page only uses `fetch`, never `XMLHttpRequest` | `XMLHttpRequestInstrumentation`, if still registered, wraps a prototype method that's never called — near-zero runtime cost, but unlike Node, still shipped in the bundle unless explicitly omitted | §3.3 |
-| 2 | SPA with client-side routing, no full page reloads after initial load | `DocumentLoadInstrumentation` produces exactly one span tree, at the very first load, then never again — expected, not broken | §3.3 |
-| 3 | `setTimeout`/raw async code inside `StackContextManager` setup | Silently loses parent context — child spans become unparented roots with no warning | §3.4 |
-| 4 | Angular app using `ZoneContextManager` | Possible zone.js version/instance conflict with Angular's own change-detection zone usage | §3.4 |
-| 5 | New allow-listed CORS origin doesn't return `Access-Control-Allow-Headers: traceparent` | The **entire request is blocked** by the browser, not just un-traced — a functional break, not a telemetry gap | §3.5 |
-| 6 | Own API origin forgotten from `propagateTraceHeaderCorsUrls` | Request works fine, just isn't traced — downstream span appears as an unlinked root, same signature as a missing upstream hop | §3.5 |
-| 7 | CLS/INP web-vitals callback fires during page unload | Race against both the metric callback's own timing and the exporter's ability to flush before the tab closes | §3.7, §3.8 |
-| 8 | `BatchSpanProcessor`'s scheduled flush hasn't fired yet when the tab closes | Buffered spans can be lost entirely unless an explicit `visibilitychange`/beacon-based flush is wired up | §3.8 |
-| 9 | Ad blockers / privacy extensions present in the user's browser | Can block the OTLP exporter's outgoing requests (matched as "tracking" traffic by some blocklists depending on the endpoint's hostname/path) — a source of silently missing telemetry with no error surfaced to the app, worth knowing is a real, unfixable-from-your-side gap, not a bug to chase | — |
-| 10 | Same origin instrumented by both `FetchInstrumentation` and application code manually wrapping `fetch` | Risk of double-wrapping/double span creation, same general shape as ch. 2's manual+auto double-instrumentation case | ch. 2 §2.10 #12 |
+| #   | Scenario                                                                                               | What actually happens                                                                                                                                                                                                                                                                              | Reference       |
+| --- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| 1   | Page only uses `fetch`, never `XMLHttpRequest`                                                         | `XMLHttpRequestInstrumentation`, if still registered, wraps a prototype method that's never called — near-zero runtime cost, but unlike Node, still shipped in the bundle unless explicitly omitted                                                                                                | §3.3            |
+| 2   | SPA with client-side routing, no full page reloads after initial load                                  | `DocumentLoadInstrumentation` produces exactly one span tree, at the very first load, then never again — expected, not broken                                                                                                                                                                      | §3.3            |
+| 3   | `setTimeout`/raw async code inside `StackContextManager` setup                                         | Silently loses parent context — child spans become unparented roots with no warning                                                                                                                                                                                                                | §3.4            |
+| 4   | Angular app using `ZoneContextManager`                                                                 | Possible zone.js version/instance conflict with Angular's own change-detection zone usage                                                                                                                                                                                                          | §3.4            |
+| 5   | New allow-listed CORS origin doesn't return `Access-Control-Allow-Headers: traceparent`                | The **entire request is blocked** by the browser, not just un-traced — a functional break, not a telemetry gap                                                                                                                                                                                     | §3.5            |
+| 6   | Own API origin forgotten from `propagateTraceHeaderCorsUrls`                                           | Request works fine, just isn't traced — downstream span appears as an unlinked root, same signature as a missing upstream hop                                                                                                                                                                      | §3.5            |
+| 7   | CLS/INP web-vitals callback fires during page unload                                                   | Race against both the metric callback's own timing and the exporter's ability to flush before the tab closes                                                                                                                                                                                       | §3.7, §3.8      |
+| 8   | `BatchSpanProcessor`'s scheduled flush hasn't fired yet when the tab closes                            | Buffered spans can be lost entirely unless an explicit `visibilitychange`/beacon-based flush is wired up                                                                                                                                                                                           | §3.8            |
+| 9   | Ad blockers / privacy extensions present in the user's browser                                         | Can block the OTLP exporter's outgoing requests (matched as "tracking" traffic by some blocklists depending on the endpoint's hostname/path) — a source of silently missing telemetry with no error surfaced to the app, worth knowing is a real, unfixable-from-your-side gap, not a bug to chase | —               |
+| 10  | Same origin instrumented by both `FetchInstrumentation` and application code manually wrapping `fetch` | Risk of double-wrapping/double span creation, same general shape as ch. 2's manual+auto double-instrumentation case                                                                                                                                                                                | ch. 2 §2.10 #12 |

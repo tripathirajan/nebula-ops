@@ -3,11 +3,11 @@
 ## Purpose
 
 `otel-core` is the environment-agnostic foundation shared by every other
-`@nebula-ops/otel` package. It owns the `NebulaOtelConfig` shape and its resolution
+`@nebula-ops/otel` package. It owns the `OtelConfig` shape and its resolution
 rules, resource/attribute conventions layered on top of OpenTelemetry semantic
 conventions, config validation, and log-context correlation primitives built on the
 standard OTel `context` API. It contains no Node-only or browser-only code — it
-defines the *shape* of context propagation and configuration; `otel-node` and
+defines the _shape_ of context propagation and configuration; `otel-node` and
 `otel-web` each supply the environment-specific `ContextManager` and env-var/build-time
 value gathering that plug into it. Every other package in the monorepo depends on
 `otel-core`; it depends on nothing else in the monorepo.
@@ -16,7 +16,7 @@ value gathering that plug into it. Every other package in the monorepo depends o
 
 ```ts
 // ---- Config ----
-export interface NebulaOtelConfig {
+export interface OtelConfig {
   serviceName: string;
   serviceVersion?: string;
   environment?: string;
@@ -32,24 +32,22 @@ export interface ConfigSource {
   [key: string]: unknown;
 }
 
-export function resolveConfig(
-  overrides?: Partial<NebulaOtelConfig>,
-  source?: ConfigSource
-): NebulaOtelConfig;
+export function resolveConfig(overrides?: Partial<OtelConfig>, source?: ConfigSource): OtelConfig;
 
-export function validateConfig(config: unknown): NebulaOtelConfig; // throws NebulaConfigError
-export class NebulaConfigError extends Error {
+export function validateConfig(config: unknown): OtelConfig; // throws ConfigError
+export class ConfigError extends Error {
   readonly issues: Array<{ path: string; message: string }>;
 }
 
 // ---- Resource / attributes ----
-export function buildResource(config: NebulaOtelConfig): Resource; // @opentelemetry/resources Resource
+export function buildResource(config: OtelConfig): Resource; // @opentelemetry/resources Resource
 
-export const NebulaAttributes: {
+export const OtelAttributes: {
   readonly SERVICE_NAME: 'service.name';
   readonly SERVICE_VERSION: 'service.version';
   readonly DEPLOYMENT_ENVIRONMENT: 'deployment.environment';
-  readonly NEBULA_PACKAGE_VERSION: 'nebula.otel.package_version';
+  readonly TELEMETRY_DISTRO_NAME: 'telemetry.distro.name';
+  readonly TELEMETRY_DISTRO_VERSION: 'telemetry.distro.version';
 };
 
 // ---- Log-context correlation ----
@@ -63,7 +61,7 @@ export interface LogContext {
 export function getActiveLogContext(): LogContext;
 export function runWithLogContext<T>(context: LogContext, fn: () => T): T;
 export function bindLogContext<Args extends unknown[], R>(
-  fn: (...args: Args) => R
+  fn: (...args: Args) => R,
 ): (...args: Args) => R;
 
 // Formats the active OTel span context (if any) into a LogContext — used by
@@ -76,25 +74,41 @@ export const OTEL_CORE_VERSION: string;
 
 ## Internal modules
 
-| Module | Responsibility |
-|---|---|
-| `src/config/resolve.ts` | Merge precedence: explicit overrides > `ConfigSource` values > defaults. Pure function, no I/O. |
-| `src/config/schema.ts` | Runtime validation schema (e.g. zod) backing `validateConfig`; single source of truth for required/optional fields and types. |
-| `src/config/errors.ts` | `NebulaConfigError` and issue formatting. |
-| `src/resource/build-resource.ts` | Maps `NebulaOtelConfig` → `@opentelemetry/resources` `Resource`, merging `resourceAttributes` with `NebulaAttributes`-derived values. |
-| `src/attributes/nebula-attributes.ts` | Constants layered on `@opentelemetry/semantic-conventions`. |
-| `src/context/log-context.ts` | `LogContext` type, `getActiveLogContext`/`runWithLogContext`/`bindLogContext`, implemented purely against `@opentelemetry/api`'s `context`/`trace` APIs (no `ContextManager` installation — that's the environment package's job). |
-| `src/context/from-span.ts` | `logContextFromActiveSpan` — reads `trace.getSpan(context.active())` and formats ids/flags. |
-| `src/index.ts` | Public export barrel — the frozen surface above, nothing else. |
+| Module                              | Responsibility                                                                                                                                                                                                                     |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/config/resolve.ts`             | Merge precedence: explicit overrides > `ConfigSource` values > defaults. Pure function, no I/O.                                                                                                                                    |
+| `src/config/schema.ts`              | Runtime validation schema (e.g. zod) backing `validateConfig`; single source of truth for required/optional fields and types.                                                                                                      |
+| `src/config/errors.ts`              | `ConfigError` and issue formatting.                                                                                                                                                                                                |
+| `src/resource/build-resource.ts`    | Maps `OtelConfig` → `@opentelemetry/resources` `Resource`, merging `resourceAttributes` with `OtelAttributes`-derived values.                                                                                                      |
+| `src/attributes/otel-attributes.ts` | Constants layered on `@opentelemetry/semantic-conventions`.                                                                                                                                                                        |
+| `src/context/log-context.ts`        | `LogContext` type, `getActiveLogContext`/`runWithLogContext`/`bindLogContext`, implemented purely against `@opentelemetry/api`'s `context`/`trace` APIs (no `ContextManager` installation — that's the environment package's job). |
+| `src/context/from-span.ts`          | `logContextFromActiveSpan` — reads `trace.getSpan(context.active())` and formats ids/flags.                                                                                                                                        |
+| `src/index.ts`                      | Public export barrel — the frozen surface above, nothing else.                                                                                                                                                                     |
 
 ## External dependencies
 
-| Package | Version range | Kind |
-|---|---|---|
-| `@opentelemetry/api` | `^1.9.0` | `peerDependency` (+ matching `devDependency` for local build) |
-| `@opentelemetry/resources` | `~1.26.0` | `dependency` |
-| `@opentelemetry/semantic-conventions` | `~1.27.0` | `dependency` |
-| `zod` | `^3.23.0` | `dependency` (config schema validation) |
+| Package                               | Version range | Kind                                                          |
+| ------------------------------------- | ------------- | ------------------------------------------------------------- |
+| `@opentelemetry/api`                  | `^1.9.0`      | `peerDependency` (+ matching `devDependency` for local build) |
+| `@opentelemetry/resources`            | `^2.10.0`     | `dependency`                                                  |
+| `@opentelemetry/semantic-conventions` | `^1.37.0`     | `dependency`                                                  |
+| `zod`                                 | `^3.23.0`     | `dependency` (config schema validation)                       |
+
+**Version-correction note (implementation time, M1):** this table originally pinned
+`@opentelemetry/resources ~1.26.0` and `@opentelemetry/semantic-conventions ~1.27.0`,
+guessed at Phase 1 planning time. By M1 implementation, the real npm registry had
+moved to `@opentelemetry/resources` 2.x, which **removed the `Resource` class's
+public constructor** (`new Resource(attrs)`) in favor of a `resourceFromAttributes(attrs)`
+factory function — `Resource` is now a non-user-constructible interface. `otel-core`'s
+`buildResource` was written against the verified 2.x API from the start of
+implementation (not against the stale 1.x guess), and `@opentelemetry/api`'s peer
+range (`^1.9.0`) stayed compatible across this bump (`resources@2.x` peers on
+`@opentelemetry/api >=1.3.0 <1.10.0`, `sdk-metrics@2.x` on `>=1.9.0 <1.10.0` — both
+satisfied by the same installed `1.9.1`), so no other otel-core export changed
+because of this. Flagged per CLAUDE.md's non-negotiable rules and the governance
+policy's "record exact version and why" requirement — this is the kind of deviation
+that's expected to happen when a spec is written from training-data knowledge rather
+than a live registry lookup, not evidence the spec process failed.
 
 No Node builtins, no DOM/browser globals, no bundler-specific imports.
 

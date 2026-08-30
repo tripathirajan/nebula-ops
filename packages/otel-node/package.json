@@ -1,0 +1,60 @@
+{
+  "name": "@nebula-ops/otel-node",
+  "version": "0.0.0",
+  "description": "NodeSDK setup, auto-instrumentations, OTLP exporters, and pino/winston log-context bindings for @nebula-ops/otel.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "clean": "rm -rf dist coverage .turbo"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "pino": "^9.0.0 || ^10.0.0",
+    "winston": "^3.13.0"
+  },
+  "peerDependenciesMeta": {
+    "pino": {
+      "optional": true
+    },
+    "winston": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@nebula-ops/otel-core": "workspace:*",
+    "@opentelemetry/auto-instrumentations-node": "^0.79.0",
+    "@opentelemetry/context-async-hooks": "^2.10.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.221.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.221.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
+    "@opentelemetry/instrumentation": "^0.221.0",
+    "@opentelemetry/sdk-logs": "^0.221.0",
+    "@opentelemetry/sdk-metrics": "^2.10.0",
+    "@opentelemetry/sdk-node": "^0.221.0"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
+    "@types/node": "^22.9.0",
+    "pino": "^9.9.0",
+    "winston": "^3.19.0"
+  }
+}

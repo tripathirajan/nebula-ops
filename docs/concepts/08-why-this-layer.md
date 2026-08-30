@@ -14,7 +14,7 @@ numbering; if you're cross-referencing an older discussion that cited a section
 number from before the expansion, re-check it against the current chapter — several
 numbers shifted.
 
-## 8.1 What raw OpenTelemetry does *not* give you for free
+## 8.1 What raw OpenTelemetry does _not_ give you for free
 
 Everything in §1–§6 is genuinely vendor-neutral and well-designed — but it is a
 **toolkit**, not an **opinionated setup**. Concretely, plain `@opentelemetry/*`
@@ -51,7 +51,7 @@ vendor-neutral toolkit, which by nature has to stay unopinionated about all of t
 above. **Filling in the opinions, once, consistently, is exactly what a thin org
 wrapper is for.**
 
-## 8.2 What the wrapper deliberately does *not* try to change
+## 8.2 What the wrapper deliberately does _not_ try to change
 
 Per ch. 7 §7.3 and §7.7, the wrapper is not meant to hide OTel or invent a parallel API:
 
@@ -59,7 +59,7 @@ Per ch. 7 §7.3 and §7.7, the wrapper is not meant to hide OTel or invent a par
   §1.8) — application code that needs to drop to raw OTel API calls (create a manual
   span per ch. 2 §2.4, read `trace.getSpan(context.active())` directly) can always do
   so; the wrapper adds convenience, it doesn't gate access.
-- Signal semantics (what a span/metric/log *is*, ch. 1 §1.1–§1.4) are untouched — the
+- Signal semantics (what a span/metric/log _is_, ch. 1 §1.1–§1.4) are untouched — the
   wrapper configures pipelines, it doesn't redefine what a trace means.
 - The Collector-vs-direct-export decision (ch. 1 §1.9) stays a deployment/infra
   choice, not something baked into the wrapper — `endpoint`/`headers` are config, not
@@ -67,27 +67,27 @@ Per ch. 7 §7.3 and §7.7, the wrapper is not meant to hide OTel or invent a par
 
 ## 8.3 Mapping concepts to package boundaries
 
-| Concept from §1–§7 | Where it lands in this repo |
-|---|---|
-| Resource building, semantic-convention attribute constants (ch. 1 §1.10) | `otel-core` — environment-agnostic by construction (ch. 7 §7.5), since building a `Resource` object needs no Node/browser-specific API |
-| Config schema + env-var/precedence resolution (ch. 7 §7.2) | `otel-core` — same reasoning; the *values* differ per environment, the *shape*/*resolution logic* doesn't |
-| Log-context correlation primitives (`LogContext`, `getActiveLogContext`) (ch. 4 §4.4) | `otel-core` — reads the OTel `context` API, which is itself environment-agnostic (ch. 1 §1.5); only the *ContextManager installation* is environment-specific |
-| `AsyncLocalStorageContextManager` installation, auto-instrumentation unused-library/version-compatibility behavior (ch. 2 §2.2–§2.3) | `otel-node` only — this is the Node-specific half of context propagation |
-| `ZoneContextManager`/`StackContextManager` installation, CORS trace-header allow-list, public-endpoint/payload-budget posture (ch. 3 §3.4, §3.5, §3.10) | `otel-web` only — the browser-specific half, plus browser-only safety/cost concerns with no Node equivalent |
-| `NodeSDK` assembly, auto-instrumentations-node (with explicit disable list, ch. 2 §2.2), OTLP exporters, pino/winston bindings (ch. 2, ch. 4 §4.5–§4.6) | `otel-node` |
-| Inbound/outbound span shapes for HTTP, DB, Redis, message queues (ch. 2 §2.5–§2.7) | `otel-node` only — the browser has no inbound/"server" role at all (ch. 3 §3.6); `otel-web` only ever produces outbound `CLIENT` spans |
-| `WebTracerProvider` assembly, fetch/XHR/document-load instrumentation, web-vitals bridge, console bridge (ch. 3, ch. 4 §4.7) | `otel-web` |
-| Sensible `BatchSpanProcessor`/`BatchLogRecordProcessor` defaults with overridable tuning (ch. 5 §5.2, ch. 7 §7.6) | Defaults live in `otel-node`/`otel-web` (each environment's own default exporter/processor factories), because the exporter transport itself is environment-specific (OTLP/gRPC-or-HTTP in Node vs OTLP/HTTP-only in the browser, ch. 3 §3.10) even though the *concept* is shared |
-| Sampling ratio as config, `ParentBased(TraceIdRatioBased(...))` as default (ch. 1 §1.6, ch. 6 §6.2) | `NebulaOtelConfig.sampling.ratio`, resolved in `otel-core`, applied when each environment package constructs its `TracerProvider` |
-| Cardinality-safe metric-attribute guidance (ch. 6 §6.4) | Not a config knob anywhere — a call-site convention documented for consumers, see §8.5 below |
-| In-memory exporters + assertion helpers (ch. 7 §7.7) | `otel-testing` — deliberately graph-neutral (ch. 7 §7.7's "shouldn't be per-service work" applies equally regardless of Node vs web) |
+| Concept from §1–§7                                                                                                                                                                 | Where it lands in this repo                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resource building, semantic-convention attribute constants (ch. 1 §1.10)                                                                                                           | `otel-core` — environment-agnostic by construction (ch. 7 §7.5), since building a `Resource` object needs no Node/browser-specific API                                                                                                                                                                                                                                           |
+| Config schema + env-var/precedence resolution (ch. 7 §7.2)                                                                                                                         | `otel-core` — same reasoning; the _values_ differ per environment, the _shape_/_resolution logic_ doesn't                                                                                                                                                                                                                                                                        |
+| Log-context correlation primitives (`LogContext`, `getActiveLogContext`) (ch. 4 §4.4)                                                                                              | `otel-core` — reads the OTel `context` API, which is itself environment-agnostic (ch. 1 §1.5); only the _ContextManager installation_ is environment-specific                                                                                                                                                                                                                    |
+| `AsyncLocalStorageContextManager` installation, auto-instrumentation unused-library/version-compatibility behavior (ch. 2 §2.2–§2.3)                                               | `otel-node` only — this is the Node-specific half of context propagation                                                                                                                                                                                                                                                                                                         |
+| `ZoneContextManager`/`StackContextManager` installation, CORS trace-header allow-list, public-endpoint/payload-budget posture (ch. 3 §3.4, §3.5, §3.10)                            | `otel-web` only — the browser-specific half, plus browser-only safety/cost concerns with no Node equivalent                                                                                                                                                                                                                                                                      |
+| `NodeSDK` assembly, auto-instrumentations-node (with explicit disable list, ch. 2 §2.2), OTLP exporters, pino/winston bindings (ch. 2, ch. 4 §4.5–§4.6)                            | `otel-node`                                                                                                                                                                                                                                                                                                                                                                      |
+| Inbound/outbound span shapes for HTTP, DB, Redis, message queues (ch. 2 §2.5–§2.7)                                                                                                 | `otel-node` only — the browser has no inbound/"server" role at all (ch. 3 §3.6); `otel-web` only ever produces outbound `CLIENT` spans                                                                                                                                                                                                                                           |
+| `WebTracerProvider` assembly, fetch/XHR/document-load instrumentation, web-vitals bridge, console bridge (ch. 3, ch. 4 §4.7)                                                       | `otel-web`                                                                                                                                                                                                                                                                                                                                                                       |
+| Sensible `BatchSpanProcessor`/`BatchLogRecordProcessor` defaults with overridable tuning (ch. 5 §5.2, ch. 7 §7.6)                                                                  | Defaults live in `otel-node`/`otel-web` (each environment's own default exporter/processor factories), because the exporter transport itself is environment-specific (OTLP/gRPC-or-HTTP in Node vs OTLP/HTTP-only in the browser, ch. 3 §3.10) even though the _concept_ is shared                                                                                               |
+| Sampling ratio as config, `ParentBased(TraceIdRatioBased(...))` as default (ch. 1 §1.6, ch. 6 §6.2)                                                                                | `OtelConfig.sampling.ratio`, resolved in `otel-core`, applied when each environment package constructs its `TracerProvider`                                                                                                                                                                                                                                                      |
+| Cardinality-safe metric-attribute guidance (ch. 6 §6.4)                                                                                                                            | Not a config knob anywhere — a call-site convention documented for consumers, see §8.5 below                                                                                                                                                                                                                                                                                     |
+| In-memory exporters + assertion helpers (ch. 7 §7.7)                                                                                                                               | `otel-testing` — deliberately graph-neutral (ch. 7 §7.7's "shouldn't be per-service work" applies equally regardless of Node vs web)                                                                                                                                                                                                                                             |
 | React-specific ergonomics (route-change spans, error boundary → span events, `useSpan`, StrictMode/concurrent-rendering-safe span lifecycle, SSR/hydration trace bridging) (ch. 9) | `otel-react` — this is new surface area OTel itself has no opinion on at all (no signal/concept in ch. 1–6 corresponds to "route change" or "React component lifecycle"); it's pure convenience on top of `otel-web`'s tracer, and ch. 9 is where the reasoning behind each specific export in [`../package-specs/otel-react.md`](../package-specs/otel-react.md) actually lives |
 
 ## 8.4 Why the specific `otel-node`/`otel-web`-never-depend-on-each-other rule exists
 
 This isn't an arbitrary constraint — it falls directly out of ch. 3 §3.1: Node and
 browser solve context propagation, instrumentation mechanics, and export transport in
-*fundamentally different ways* (module-patching vs global-patching,
+_fundamentally different ways_ (module-patching vs global-patching,
 AsyncLocalStorage vs Zone/Stack, OTLP/gRPC-or-HTTP vs OTLP/HTTP-only, and — per ch. 3
 §3.6 — Node has an inbound/`SERVER`-span role the browser structurally doesn't).
 There is no correct shared code between them beyond what's already

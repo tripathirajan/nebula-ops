@@ -1,0 +1,40 @@
+{
+  "name": "@nebula-ops/otel-core",
+  "version": "0.0.0",
+  "description": "Environment-agnostic OpenTelemetry config, resource, and log-context foundations shared by @nebula-ops/otel-node and @nebula-ops/otel-web.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "clean": "rm -rf dist coverage .turbo"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "dependencies": {
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/semantic-conventions": "^1.37.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-async-hooks": "^2.10.0"
+  }
+}

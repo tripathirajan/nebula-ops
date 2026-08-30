@@ -12,11 +12,11 @@ application code.
 
 Three separate but related **signals**:
 
-| Signal | What it captures | Core unit |
-|---|---|---|
-| **Traces** | The path a single request/operation takes through a system, as a tree of timed operations. | `Span` |
-| **Metrics** | Aggregated numeric measurements over time (counts, durations, gauges). | `Instrument` (Counter, Histogram, Gauge, ...) recording data points |
-| **Logs** | Discrete timestamped event records — the familiar "log line," but structured and, critically, correlatable to the active trace. | `LogRecord` |
+| Signal      | What it captures                                                                                                                | Core unit                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Traces**  | The path a single request/operation takes through a system, as a tree of timed operations.                                      | `Span`                                                              |
+| **Metrics** | Aggregated numeric measurements over time (counts, durations, gauges).                                                          | `Instrument` (Counter, Histogram, Gauge, ...) recording data points |
+| **Logs**    | Discrete timestamped event records — the familiar "log line," but structured and, critically, correlatable to the active trace. | `LogRecord`                                                         |
 
 ## 1.2 Traces
 
@@ -32,7 +32,7 @@ function call you chose to instrument. A span has:
 - **Attributes**: key-value metadata (`http.method: "GET"`, `db.statement: "..."`).
 - **Events**: timestamped points within the span's lifetime (e.g. "cache miss",
   or an exception being recorded).
-- **Links**: references to *other* spans/traces that are causally related but not a
+- **Links**: references to _other_ spans/traces that are causally related but not a
   direct parent (e.g. a span that triggered a batch job later processes many original
   requests — each item can link back to its originating trace).
 - A **SpanKind**: `INTERNAL`, `SERVER`, `CLIENT`, `PRODUCER`, `CONSUMER` — tells
@@ -42,7 +42,7 @@ function call you chose to instrument. A span has:
 **Context propagation** is what stitches spans across process boundaries into one
 trace: the active SpanContext is serialized into outgoing request headers (commonly
 `traceparent`/`tracestate`, the W3C Trace Context standard) and deserialized on the
-receiving side to become the parent of that service's spans. Propagation *within* a
+receiving side to become the parent of that service's spans. Propagation _within_ a
 single process (across async boundaries, callbacks, promises) is a separate,
 language-specific mechanism — see §1.4 and the Node/Web chapters.
 
@@ -63,7 +63,7 @@ shaped to the tracing API's **TracerProvider** → **Tracer** → **Span**. A
 **MetricReader** (periodic or on-demand) pulls current instrument values and hands
 them to an exporter.
 
-Every metric data point carries **attributes** too, but attribute *cardinality*
+Every metric data point carries **attributes** too, but attribute _cardinality_
 matters much more here than for traces: a Counter with a `user_id` attribute
 effectively creates one time series per user, which most metrics backends handle
 badly at scale (see §6.3 in the performance chapter).
@@ -82,7 +82,7 @@ for how a wrapper should be designed (see [`04-logging-integration.md`](04-loggi
 1. **Logs Bridge API** — your existing logger (pino, winston, the browser console)
    keeps being the thing application code calls. A bridge/appender intercepts what it
    emits and forwards it into the OTel Logs pipeline (LoggerProvider → LogRecordProcessor
-   → exporter), *tagging it with trace context* along the way. No application code
+   → exporter), _tagging it with trace context_ along the way. No application code
    changes.
 2. **Direct OTel Logs API** — application code calls `logger.emit(...)` on an OTel
    `Logger` directly, bypassing any existing logging library. Rare in practice for
@@ -91,7 +91,7 @@ for how a wrapper should be designed (see [`04-logging-integration.md`](04-loggi
 
 ## 1.5 Context and propagation (the general model)
 
-`Context` is a generic, immutable key-value carrier — the *active span* is just one
+`Context` is a generic, immutable key-value carrier — the _active span_ is just one
 thing stored in it (under a well-known key), which is why the same `context` API
 underlies both trace-parenting and arbitrary app-level context propagation. Two
 propagation problems, solved differently:
@@ -111,7 +111,7 @@ propagation problems, solved differently:
 Not every trace needs to be kept — sampling controls cost and noise. Two axes:
 
 - **Head-based sampling** — the decision ("keep this trace or not") is made at the
-  *start* of the trace (typically the root span), before you know how it turns out.
+  _start_ of the trace (typically the root span), before you know how it turns out.
   Cheap, simple, the default in most setups. Common samplers:
   - `AlwaysOn` / `AlwaysOff`
   - `TraceIdRatioBased(ratio)` — deterministic probability sampling keyed off the
@@ -119,10 +119,10 @@ Not every trace needs to be kept — sampling controls cost and noise. Two axes:
     same trace ID and derives the same keep/drop decision independently).
   - `ParentBased(root)` — respect the parent's sampling decision if there is one
     (propagated via the sampled bit in `traceparent`), otherwise fall back to a root
-    sampler. This is what keeps a trace *complete* across services — if service A
+    sampler. This is what keeps a trace _complete_ across services — if service A
     decided "sampled," service B must not independently decide "not sampled" for the
     same trace.
-- **Tail-based sampling** — the decision is deferred until the *whole* trace is seen
+- **Tail-based sampling** — the decision is deferred until the _whole_ trace is seen
   (e.g. "keep it if any span errored, or if p99 latency, even if we'd normally
   sample it out"). Requires buffering complete traces somewhere that can see all
   spans across all services — practically, this means the **Collector** (not the
@@ -156,10 +156,10 @@ OpenTelemetry JS is split into two layers:
 - **`@opentelemetry/api`** — the interfaces application code (and instrumentation
   libraries) call against: `trace.getTracer()`, `context.active()`, etc. No-op by
   default — if no SDK is registered, every call is a safe no-op with negligible
-  overhead. Libraries are encouraged to depend on *only* this package.
+  overhead. Libraries are encouraged to depend on _only_ this package.
 - **SDK packages** (`@opentelemetry/sdk-trace-node`, `sdk-trace-web`, `sdk-metrics`,
   `sdk-logs`, plus exporters and instrumentations) — the actual implementation:
-  processors, exporters, samplers, resource detection. The *application* (not
+  processors, exporters, samplers, resource detection. The _application_ (not
   libraries) installs and configures one of these, which registers itself as the
   live implementation behind the API's global registration points
   (`trace.setGlobalTracerProvider`, etc.).
@@ -190,11 +190,11 @@ each other — gRPC or HTTP/protobuf (or HTTP/JSON). It's what "OTLP exporter" a
 
 ## 1.10 Resources
 
-A **Resource** is the set of attributes describing *what produced* the telemetry —
+A **Resource** is the set of attributes describing _what produced_ the telemetry —
 `service.name`, `service.version`, `deployment.environment`, host/container/k8s
 metadata — attached once per SDK instance (not per span/metric/log individually) and
 merged into everything that SDK instance exports. Resource detection can be automatic
 (env, host, cloud-provider detectors) or explicit. Semantic conventions
-(`@opentelemetry/semantic-conventions`) standardize the *names* of common resource and
+(`@opentelemetry/semantic-conventions`) standardize the _names_ of common resource and
 span attributes so a `service.name` attribute means the same thing across every
 vendor's tooling.

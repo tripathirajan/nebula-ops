@@ -41,22 +41,22 @@ export const OTEL_TESTING_VERSION: string;
 
 ## Internal modules
 
-| Module | Responsibility |
-|---|---|
-| `src/exporters/span-exporter.ts` | `createInMemorySpanExporter` wrapping `@opentelemetry/sdk-trace-base`'s `InMemorySpanExporter`. |
-| `src/exporters/log-exporter.ts` | `createInMemoryLogExporter` wrapping `@opentelemetry/sdk-logs`'s in-memory equivalent (or a minimal local implementation if upstream doesn't ship one at the pinned version — confirmed during M4 implementation). |
-| `src/assertions/expect-span.ts` | `expectSpan` matcher/assertion logic, framework-agnostic error formatting. |
-| `src/assertions/expect-log-record.ts` | `expectLogRecord` matcher/assertion logic. |
-| `src/reset.ts` | `resetExporters`. |
-| `src/index.ts` | Public export barrel. |
+| Module                                | Responsibility                                                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/exporters/span-exporter.ts`      | `createInMemorySpanExporter` wrapping `@opentelemetry/sdk-trace-base`'s `InMemorySpanExporter`.                                                                                                                    |
+| `src/exporters/log-exporter.ts`       | `createInMemoryLogExporter` wrapping `@opentelemetry/sdk-logs`'s in-memory equivalent (or a minimal local implementation if upstream doesn't ship one at the pinned version — confirmed during M4 implementation). |
+| `src/assertions/expect-span.ts`       | `expectSpan` matcher/assertion logic, framework-agnostic error formatting.                                                                                                                                         |
+| `src/assertions/expect-log-record.ts` | `expectLogRecord` matcher/assertion logic.                                                                                                                                                                         |
+| `src/reset.ts`                        | `resetExporters`.                                                                                                                                                                                                  |
+| `src/index.ts`                        | Public export barrel.                                                                                                                                                                                              |
 
 ## External dependencies
 
-| Package | Version range | Kind |
-|---|---|---|
-| `@opentelemetry/api` | `^1.9.0` | `peerDependency` |
-| `@opentelemetry/sdk-trace-base` | `~1.28.0` | `dependency` |
-| `@opentelemetry/sdk-logs` | `~0.55.0` | `dependency` |
+| Package                         | Version range | Kind             |
+| ------------------------------- | ------------- | ---------------- |
+| `@opentelemetry/api`            | `^1.9.0`      | `peerDependency` |
+| `@opentelemetry/sdk-trace-base` | `~1.28.0`     | `dependency`     |
+| `@opentelemetry/sdk-logs`       | `~0.55.0`     | `dependency`     |
 
 Deliberately **no** dependency on `@nebula-ops/otel-core`, `otel-node`, or `otel-web` —
 keeping it graph-neutral is part of its purpose (a consuming app testing `otel-node`
