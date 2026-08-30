@@ -29,6 +29,12 @@ backends and browser frontends, sharing a common config and log-context core.
 `otel-node` and `otel-web` never depend on each other — both depend only on
 `otel-core`. See [`docs/architecture.md`](docs/architecture.md) for why.
 
+## Examples
+
+- [`examples/node-app`](examples/node-app) — a minimal Express service showing
+  `otel-core`/`otel-node` end-to-end: auto-instrumentation, a manual span, error
+  recording, and trace-correlated pino logs. `pnpm --filter node-app dev` and go.
+
 ## Development
 
 ```bash

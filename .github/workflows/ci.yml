@@ -38,5 +38,8 @@ jobs:
         if: github.event_name == 'pull_request'
         run: pnpm changeset status --since=origin/main
 
-  # An `examples` job (building examples/node-app, examples/web-app) is added here
-  # once M5 ships those directories — see docs/implementation-plan.md.
+  # examples/node-app's own `lint`/`typecheck` scripts are already picked up by the
+  # `pnpm turbo run lint typecheck test build` step above — turbo runs a task in
+  # every package that defines it, no separate job needed. It has no `test`/`build`
+  # script (it's a runnable demo, not a published package — see .changeset/config.json's
+  # `ignore: ["examples/*"]`), so those two tasks simply no-op for it.
