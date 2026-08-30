@@ -21,7 +21,7 @@ backends and browser frontends, sharing a common config and log-context core.
 | Package                                       | Status       | Purpose                                                                                                          |
 | --------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
 | [`@nebula-ops/otel-core`](packages/otel-core) | done (M1)    | Config schema, resource/attribute conventions, environment-agnostic log-context propagation. 100% test coverage. |
-| [`@nebula-ops/otel-node`](packages/otel-node) | planned      | NodeSDK setup, auto-instrumentations, OTLP exporters, pino/winston bindings.                                     |
+| [`@nebula-ops/otel-node`](packages/otel-node) | done (M2)    | NodeSDK setup, auto-instrumentations, OTLP exporters, pino/winston bindings. 100% test coverage.                 |
 | [`@nebula-ops/otel-web`](packages/otel-web)   | planned      | WebTracerProvider, fetch/XHR instrumentation, web-vitals bridge.                                                 |
 | `@nebula-ops/otel-react`                      | stretch (M4) | Route-change spans, error boundary → span events, `useSpan`.                                                     |
 | `@nebula-ops/otel-testing`                    | stretch (M4) | In-memory exporters, span/log assertion helpers.                                                                 |

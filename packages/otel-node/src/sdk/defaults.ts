@@ -43,7 +43,9 @@ export function createDefaultMetricReader(config: OtelConfig): IMetricReader {
  * M1-M3, so nothing in `startNodeSdk` wires application log calls into this
  * processor automatically. */
 export function createDefaultLogRecordProcessor(config: OtelConfig): LogRecordProcessor {
-  return new BatchLogRecordProcessor(new OTLPLogExporter(otlpExporterOptions(config)));
+  return new BatchLogRecordProcessor({
+    exporter: new OTLPLogExporter(otlpExporterOptions(config)),
+  });
 }
 
 /** Default instrumentation set: the full `auto-instrumentations-node` meta-package,

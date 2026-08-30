@@ -41,6 +41,11 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
+      // The base `no-undef` rule doesn't understand TS ambient/global types (e.g.
+      // `NodeJS.ProcessEnv`) and produces false positives on them — typescript-eslint's
+      // own guidance is to disable it for .ts files entirely, since the TS compiler
+      // already catches genuine undefined-identifier errors more accurately.
+      'no-undef': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',

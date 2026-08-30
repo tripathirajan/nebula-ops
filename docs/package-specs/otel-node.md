@@ -60,19 +60,40 @@ export const OTEL_NODE_VERSION: string;
 | ------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
 | `@opentelemetry/api`                        | `^1.9.0`                               | `peerDependency` (+ `devDependency`)                                      |
 | `@nebula-ops/otel-core`                     | `workspace:*` → published semver range | `dependency`                                                              |
-| `@opentelemetry/sdk-node`                   | `~0.55.0`                              | `dependency`                                                              |
-| `@opentelemetry/auto-instrumentations-node` | `~0.50.0`                              | `dependency`                                                              |
-| `@opentelemetry/exporter-trace-otlp-http`   | `~0.55.0`                              | `dependency`                                                              |
-| `@opentelemetry/exporter-metrics-otlp-http` | `~0.55.0`                              | `dependency`                                                              |
-| `@opentelemetry/exporter-logs-otlp-http`    | `~0.55.0`                              | `dependency`                                                              |
-| `@opentelemetry/sdk-metrics`                | `~1.28.0`                              | `dependency`                                                              |
-| `@opentelemetry/sdk-logs`                   | `~0.55.0`                              | `dependency`                                                              |
-| `@opentelemetry/context-async-hooks`        | `~1.28.0`                              | `dependency`                                                              |
-| `pino`                                      | `^9.0.0`                               | `peerDependency`, optional (only needed if `createPinoMixin` is used)     |
+| `@opentelemetry/sdk-node`                   | `^0.221.0`                             | `dependency`                                                              |
+| `@opentelemetry/auto-instrumentations-node` | `^0.79.0`                              | `dependency`                                                              |
+| `@opentelemetry/exporter-trace-otlp-http`   | `^0.221.0`                             | `dependency`                                                              |
+| `@opentelemetry/exporter-metrics-otlp-http` | `^0.221.0`                             | `dependency`                                                              |
+| `@opentelemetry/exporter-logs-otlp-http`    | `^0.221.0`                             | `dependency`                                                              |
+| `@opentelemetry/sdk-metrics`                | `^2.10.0`                              | `dependency`                                                              |
+| `@opentelemetry/sdk-logs`                   | `^0.221.0`                             | `dependency`                                                              |
+| `@opentelemetry/context-async-hooks`        | `^2.10.0`                              | `dependency`                                                              |
+| `@opentelemetry/instrumentation`            | `^0.221.0`                             | `dependency` (only for the `Instrumentation` type; see note below)        |
+| `pino`                                      | `^9.0.0 \|\| ^10.0.0`                  | `peerDependency`, optional (only needed if `createPinoMixin` is used)     |
 | `winston`                                   | `^3.13.0`                              | `peerDependency`, optional (only needed if `createWinstonFormat` is used) |
 
 pino/winston are marked `peerDependenciesMeta: { optional: true }` — a consumer using
 only one of the two logger bindings shouldn't be forced to install the other.
+`createPinoMixin` needs neither the `pino` value nor its types at all (its frozen
+signature is fully generic — `() => Record<string, unknown>`, exactly what pino's
+`mixin` option accepts); `createWinstonFormat` needs `winston`'s value, loaded lazily
+via `createRequire` only when the function is actually called, so that importing
+anything else from `otel-node`'s single barrel never requires `winston` to be
+installed.
+
+**Version-correction note (implementation time, M2):** every version above was
+verified against the live npm registry at implementation time rather than the
+guessed pins this table originally carried (`~0.55.0`/`~0.50.0`/`~1.28.0`) — see the
+identical note in [`otel-core.md`](otel-core.md)'s dependency table for the full
+reasoning; the same registry drift applies here since these packages are released
+together upstream. `@opentelemetry/instrumentation` was added as an explicit
+dependency during implementation (not originally listed) because `sdk/defaults.ts`
+needs its `Instrumentation` type and pnpm's strict `node_modules` doesn't expose it
+merely as a transitive dependency of `auto-instrumentations-node`/`sdk-node`; pinned
+to the same `0.221.0` line as the other experimental packages it travels with.
+`pino`'s peer range was widened to include the current `10.x` major alongside `9.x`
+(unchanged from the frozen spec's intent — the mixin API used here didn't change
+between majors) since `pino@10` is now the latest at implementation time.
 
 ## Non-goals
 
