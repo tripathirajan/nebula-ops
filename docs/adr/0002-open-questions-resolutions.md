@@ -91,7 +91,7 @@ false }` pattern or the `instrumentations` override.
 
 ### 5. `enhancedDatabaseReporting` / Redis argument capture: **not exposed as a passthrough**
 
-**Decision:** `otel-node`'s public config surface (`NebulaNodeSdkOptions`) does
+**Decision:** `otel-node`'s public config surface (`NodeSdkOptions`) does
 **not** provide a first-class way to turn on `enhancedDatabaseReporting` or
 verbatim Redis command-argument capture. A service that genuinely needs it must
 construct its own `PgInstrumentation`/`RedisInstrumentation` instance directly and

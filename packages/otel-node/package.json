@@ -15,7 +15,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
@@ -29,8 +31,12 @@
     "winston": "^3.13.0"
   },
   "peerDependenciesMeta": {
-    "pino": { "optional": true },
-    "winston": { "optional": true }
+    "pino": {
+      "optional": true
+    },
+    "winston": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@nebula-ops/otel-core": "workspace:*",

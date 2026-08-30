@@ -1,4 +1,4 @@
-import { validateConfig, DEFAULT_SAMPLING_RATIO, type NebulaOtelConfig } from './schema.js';
+import { validateConfig, DEFAULT_SAMPLING_RATIO, type OtelConfig } from './schema.js';
 import { stripUndefined, isPlainObject } from '../internal/object-utils.js';
 
 /**
@@ -101,14 +101,14 @@ function mergeRecords<V>(
  * Merges explicit `overrides` (highest precedence) over `source` (env-derived
  * values, e.g. from otel-node's `process.env` gathering) over built-in defaults
  * (lowest precedence), then validates the result — see docs/architecture.md §3 for
- * the full precedence/env-var table. Throws {@link NebulaConfigError} if the merged
+ * the full precedence/env-var table. Throws {@link ConfigError} if the merged
  * result is invalid (most commonly: no `serviceName` from either `overrides` or
  * `source`).
  */
 export function resolveConfig(
-  overrides: Partial<NebulaOtelConfig> = {},
+  overrides: Partial<OtelConfig> = {},
   source: ConfigSource = {},
-): NebulaOtelConfig {
+): OtelConfig {
   const resourceAttributes = mergeRecords(
     coerceResourceAttributes(source.resourceAttributes),
     overrides.resourceAttributes,

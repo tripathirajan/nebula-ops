@@ -62,7 +62,7 @@ and ch. 8, which is the synthesis chapter). Ready to push.
 ## Ground rules for this primer
 
 - Everything here describes **upstream OpenTelemetry** (the spec + the JS SDK
-  implementations), not any `@nebula-ops` code. No `NebulaOtelConfig`, no
+  implementations), not any `@nebula-ops` code. No `OtelConfig`, no
   `otel-core`/`otel-node`/`otel-web` references — those come later, in
   [`08-why-this-layer.md`](08-why-this-layer.md) only, as the bridge back to Phase 1's
   package specs.

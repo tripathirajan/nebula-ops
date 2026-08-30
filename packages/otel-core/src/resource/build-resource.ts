@@ -1,11 +1,11 @@
 import { resourceFromAttributes, type Resource } from '@opentelemetry/resources';
-import type { NebulaOtelConfig } from '../config/schema.js';
-import { NebulaAttributes } from '../attributes/nebula-attributes.js';
+import type { OtelConfig } from '../config/schema.js';
+import { OtelAttributes } from '../attributes/otel-attributes.js';
 import { OTEL_CORE_VERSION } from '../version.js';
 
 /**
- * Maps a resolved `NebulaOtelConfig` to an OpenTelemetry `Resource`, using
- * `NebulaAttributes`' semantic-convention-backed keys. `config.resourceAttributes`
+ * Maps a resolved `OtelConfig` to an OpenTelemetry `Resource`, using
+ * `OtelAttributes`' semantic-convention-backed keys. `config.resourceAttributes`
  * (explicit, user-supplied) takes precedence over the values this function derives
  * from `serviceName`/`serviceVersion`/`environment` — see docs/architecture.md §3's
  * precedence table, which puts explicit config above everything else. It never
@@ -14,17 +14,21 @@ import { OTEL_CORE_VERSION } from '../version.js';
  * on the caller's side), since detector-derived attributes aren't config the way
  * `resourceAttributes` is.
  */
-export function buildResource(config: NebulaOtelConfig): Resource {
+export function buildResource(config: OtelConfig): Resource {
   const derived: Record<string, string | number | boolean> = {
-    [NebulaAttributes.SERVICE_NAME]: config.serviceName,
-    [NebulaAttributes.NEBULA_PACKAGE_VERSION]: OTEL_CORE_VERSION,
+    [OtelAttributes.SERVICE_NAME]: config.serviceName,
+    // Identifies @nebula-ops/otel-core itself as the instrumentation distro that
+    // produced this telemetry, via the standard telemetry.distro.* pair — see
+    // otel-attributes.ts's doc comment for why this isn't a proprietary key.
+    [OtelAttributes.TELEMETRY_DISTRO_NAME]: '@nebula-ops/otel-core',
+    [OtelAttributes.TELEMETRY_DISTRO_VERSION]: OTEL_CORE_VERSION,
   };
 
   if (config.serviceVersion !== undefined) {
-    derived[NebulaAttributes.SERVICE_VERSION] = config.serviceVersion;
+    derived[OtelAttributes.SERVICE_VERSION] = config.serviceVersion;
   }
   if (config.environment !== undefined) {
-    derived[NebulaAttributes.DEPLOYMENT_ENVIRONMENT] = config.environment;
+    derived[OtelAttributes.DEPLOYMENT_ENVIRONMENT] = config.environment;
   }
 
   // Explicit resourceAttributes win over the derived values above (e.g. a caller

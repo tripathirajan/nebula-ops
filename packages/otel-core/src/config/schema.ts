@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NebulaConfigError, type NebulaConfigIssue } from './errors.js';
+import { ConfigError, type ConfigIssue } from './errors.js';
 
 /**
  * The config shape owned by otel-core and consumed by both otel-node and otel-web
@@ -7,7 +7,7 @@ import { NebulaConfigError, type NebulaConfigIssue } from './errors.js';
  * docs/package-specs/otel-core.md — do not change a field's name or type here
  * without updating that spec first (CLAUDE.md's non-negotiable rules).
  */
-export interface NebulaOtelConfig {
+export interface OtelConfig {
   serviceName: string;
   serviceVersion?: string;
   environment?: string;
@@ -24,9 +24,9 @@ export interface NebulaOtelConfig {
  * pre-guessed production value. */
 export const DEFAULT_SAMPLING_RATIO = 1.0;
 
-// This schema is the single source of truth for what's a *valid* NebulaOtelConfig
+// This schema is the single source of truth for what's a *valid* OtelConfig
 // (required/optional-ness, string non-emptiness, the 0-1 sampling ratio range).
-// It deliberately does not double as the source of the exported `NebulaOtelConfig`
+// It deliberately does not double as the source of the exported `OtelConfig`
 // TypeScript type via z.infer — zod's `.optional()` fields infer as `T | undefined`,
 // which reads fine but is a different shape than the hand-written interface above
 // once `exactOptionalPropertyTypes` is in play. Keeping the two independent (and
@@ -51,31 +51,31 @@ const nebulaOtelConfigSchema = z.object({
 });
 
 /**
- * Validates an arbitrary value against the `NebulaOtelConfig` shape, returning a
- * clean, type-safe `NebulaOtelConfig` on success. Throws {@link NebulaConfigError}
+ * Validates an arbitrary value against the `OtelConfig` shape, returning a
+ * clean, type-safe `OtelConfig` on success. Throws {@link ConfigError}
  * (never a raw zod error — callers should never need to import zod themselves) with
  * every failing field listed, not just the first.
  */
-export function validateConfig(input: unknown): NebulaOtelConfig {
+export function validateConfig(input: unknown): OtelConfig {
   const result = nebulaOtelConfigSchema.safeParse(input);
   if (!result.success) {
-    const issues: NebulaConfigIssue[] = result.error.issues.map((issue) => ({
+    const issues: ConfigIssue[] = result.error.issues.map((issue) => ({
       path: issue.path.join('.'),
       message: issue.message,
     }));
-    throw new NebulaConfigError(issues);
+    throw new ConfigError(issues);
   }
 
   const parsed = result.data;
   // Built via conditional spread, not `field: parsed.field` for every optional
   // field, so a field whose value is `undefined` is fully absent from the returned
   // object rather than present-with-value-undefined — required for this to satisfy
-  // `NebulaOtelConfig` under the repo's `exactOptionalPropertyTypes` tsconfig
+  // `OtelConfig` under the repo's `exactOptionalPropertyTypes` tsconfig
   // setting (see src/internal/object-utils.ts's doc comment for the same rule
   // elsewhere; `stripUndefined` alone doesn't narrow the *type* of its result, only
   // the runtime shape, so it isn't sufficient here where the return type is
-  // strictly `NebulaOtelConfig`, not `unknown`).
-  const config: NebulaOtelConfig = {
+  // strictly `OtelConfig`, not `unknown`).
+  const config: OtelConfig = {
     serviceName: parsed.serviceName,
     ...(parsed.serviceVersion !== undefined ? { serviceVersion: parsed.serviceVersion } : {}),
     ...(parsed.environment !== undefined ? { environment: parsed.environment } : {}),

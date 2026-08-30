@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { resolveConfig } from '../../src/config/resolve.js';
-import { NebulaConfigError } from '../../src/config/errors.js';
+import { ConfigError } from '../../src/config/errors.js';
 
 describe('resolveConfig', () => {
-  it('throws NebulaConfigError when serviceName is absent from both overrides and source', () => {
-    expect(() => resolveConfig()).toThrow(NebulaConfigError);
-    expect(() => resolveConfig({}, {})).toThrow(NebulaConfigError);
+  it('throws ConfigError when serviceName is absent from both overrides and source', () => {
+    expect(() => resolveConfig()).toThrow(ConfigError);
+    expect(() => resolveConfig({}, {})).toThrow(ConfigError);
   });
 
   it('resolves serviceName from source when overrides omit it', () => {
@@ -210,12 +210,12 @@ describe('resolveConfig', () => {
     expect(config.resourceAttributes).toBeUndefined();
   });
 
-  it('propagates NebulaConfigError issues for a downstream-invalid merged value', () => {
+  it('propagates ConfigError issues for a downstream-invalid merged value', () => {
     try {
       resolveConfig({ sampling: { ratio: 5 } }, { serviceName: 'svc' });
       expect.unreachable('expected resolveConfig to throw');
     } catch (err) {
-      expect(err).toBeInstanceOf(NebulaConfigError);
+      expect(err).toBeInstanceOf(ConfigError);
     }
   });
 });

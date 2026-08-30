@@ -9,7 +9,7 @@
  * which treats `{ foo: undefined }` as distinct from `{}` for a `foo?: T` field —
  * config objects built up conditionally (e.g. "only include serviceVersion if one
  * was actually provided") must not carry explicit `undefined` values through to the
- * object literal that gets returned as a `NebulaOtelConfig`.
+ * object literal that gets returned as a `OtelConfig`.
  */
 export function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
   const result = {} as T;

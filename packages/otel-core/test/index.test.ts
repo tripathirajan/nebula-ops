@@ -9,9 +9,9 @@ describe('otel-core public barrel', () => {
   it('exports every function/value promised by docs/package-specs/otel-core.md', () => {
     expect(typeof otelCore.resolveConfig).toBe('function');
     expect(typeof otelCore.validateConfig).toBe('function');
-    expect(typeof otelCore.NebulaConfigError).toBe('function'); // class
+    expect(typeof otelCore.ConfigError).toBe('function'); // class
     expect(typeof otelCore.buildResource).toBe('function');
-    expect(typeof otelCore.NebulaAttributes).toBe('object');
+    expect(typeof otelCore.OtelAttributes).toBe('object');
     expect(typeof otelCore.getActiveLogContext).toBe('function');
     expect(typeof otelCore.runWithLogContext).toBe('function');
     expect(typeof otelCore.bindLogContext).toBe('function');

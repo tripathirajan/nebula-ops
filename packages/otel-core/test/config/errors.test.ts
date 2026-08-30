@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { NebulaConfigError } from '../../src/config/errors.js';
+import { ConfigError } from '../../src/config/errors.js';
 
-describe('NebulaConfigError', () => {
+describe('ConfigError', () => {
   it('is an instance of Error and of itself', () => {
-    const err = new NebulaConfigError([{ path: 'serviceName', message: 'is required' }]);
+    const err = new ConfigError([{ path: 'serviceName', message: 'is required' }]);
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(NebulaConfigError);
-    expect(err.name).toBe('NebulaConfigError');
+    expect(err).toBeInstanceOf(ConfigError);
+    expect(err.name).toBe('ConfigError');
   });
 
   it('exposes the issues array unchanged', () => {
@@ -14,12 +14,12 @@ describe('NebulaConfigError', () => {
       { path: 'serviceName', message: 'is required' },
       { path: 'sampling.ratio', message: 'must be between 0 and 1' },
     ];
-    const err = new NebulaConfigError(issues);
+    const err = new ConfigError(issues);
     expect(err.issues).toEqual(issues);
   });
 
   it('formats a message line per issue, with its path', () => {
-    const err = new NebulaConfigError([
+    const err = new ConfigError([
       { path: 'serviceName', message: 'is required' },
       { path: 'sampling.ratio', message: 'must be between 0 and 1' },
     ]);
@@ -28,7 +28,7 @@ describe('NebulaConfigError', () => {
   });
 
   it('formats a whole-value issue with no path without a dangling colon', () => {
-    const err = new NebulaConfigError([{ path: '', message: 'must be an object' }]);
+    const err = new ConfigError([{ path: '', message: 'must be an object' }]);
     expect(err.message).toContain('- must be an object');
     expect(err.message).not.toContain(': must be an object');
   });

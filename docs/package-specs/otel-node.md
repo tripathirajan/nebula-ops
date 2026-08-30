@@ -13,7 +13,7 @@ packages — never on `otel-web`.
 ## Public exports
 
 ```ts
-export interface NebulaNodeSdkOptions extends Partial<NebulaOtelConfig> {
+export interface NodeSdkOptions extends Partial<OtelConfig> {
   instrumentations?: Instrumentation[]; // default: getNodeAutoInstrumentations() preset
   traceExporter?: SpanExporter; // default: OTLPTraceExporter from config.endpoint
   metricReader?: MetricReader; // default: PeriodicExportingMetricReader + OTLPMetricExporter
@@ -21,7 +21,7 @@ export interface NebulaNodeSdkOptions extends Partial<NebulaOtelConfig> {
   contextManager?: ContextManager; // default: AsyncLocalStorageContextManager
 }
 
-export function startNodeSdk(options?: NebulaNodeSdkOptions): NodeSDK;
+export function startNodeSdk(options?: NodeSdkOptions): NodeSDK;
 export function shutdownNodeSdk(sdk: NodeSDK): Promise<void>;
 
 // Registers process signal handlers (SIGTERM/SIGINT) that call shutdownNodeSdk.
@@ -47,7 +47,7 @@ export const OTEL_NODE_VERSION: string;
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `src/sdk/start.ts`               | `startNodeSdk` — builds `Resource` via `otel-core#buildResource`, assembles exporters/processors from options + resolved config, constructs and starts `NodeSDK`.                                      |
 | `src/sdk/shutdown.ts`            | `shutdownNodeSdk`, `registerShutdownHandlers`.                                                                                                                                                         |
-| `src/sdk/defaults.ts`            | Default exporter/processor/instrumentation factory functions, reading `NebulaOtelConfig.endpoint`/`headers`.                                                                                           |
+| `src/sdk/defaults.ts`            | Default exporter/processor/instrumentation factory functions, reading `OtelConfig.endpoint`/`headers`.                                                                                                 |
 | `src/context/context-manager.ts` | Installs `AsyncLocalStorageContextManager` from `@opentelemetry/context-async-hooks` against the global OTel `context` API — the Node-specific half of the log-context story described in `otel-core`. |
 | `src/config/from-env.ts`         | Gathers `process.env` values into the `ConfigSource` shape `otel-core#resolveConfig` expects (`OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, etc.).                                               |
 | `src/logging/pino-mixin.ts`      | `createPinoMixin`, calling `otel-core#logContextFromActiveSpan`.                                                                                                                                       |
@@ -78,7 +78,7 @@ only one of the two logger bindings shouldn't be forced to install the other.
 
 - Does not implement browser tracing, fetch/XHR instrumentation, or web-vitals —
   that's `otel-web`. `otel-node` never imports `otel-web` or browser-only packages.
-- Does not define the `NebulaOtelConfig` shape or config validation — consumes
+- Does not define the `OtelConfig` shape or config validation — consumes
   `otel-core`'s.
 - Does not provide React integration.
 - Does not provide in-memory exporters for testing — see `otel-testing`. (Consuming

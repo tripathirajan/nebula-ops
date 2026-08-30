@@ -120,12 +120,12 @@ application code (which it hands a simplified surface to) — this means:
 ## 7.4 Escape hatches — flexibility without losing the default's safety
 
 ```ts
-export interface NebulaNodeSdkOptions extends Partial<NebulaOtelConfig> {
+export interface NodeSdkOptions extends Partial<OtelConfig> {
   traceExporter?: SpanExporter; // override the default OTLP exporter entirely
   instrumentations?: Instrumentation[]; // override the default instrumentation set entirely
 }
 
-export function startNodeSdk(options: NebulaNodeSdkOptions = {}) {
+export function startNodeSdk(options: NodeSdkOptions = {}) {
   const resolved = resolveConfig(options);
   const sdk = new NodeSDK({
     resource: buildResource(resolved),
@@ -164,9 +164,9 @@ literally cannot accidentally import something environment-specific.
 // otel-core/src/config/resolve.ts — must compile and run correctly in BOTH Node and
 // a browser bundle. This is enforceable, not just a convention to remember:
 export function resolveConfig(
-  overrides: Partial<NebulaOtelConfig>,
+  overrides: Partial<OtelConfig>,
   source: ConfigSource = {},
-): NebulaOtelConfig {
+): OtelConfig {
   return {
     serviceName:
       overrides.serviceName ?? (source.serviceName as string) ?? throwMissingServiceName(),

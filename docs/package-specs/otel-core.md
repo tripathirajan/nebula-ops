@@ -3,7 +3,7 @@
 ## Purpose
 
 `otel-core` is the environment-agnostic foundation shared by every other
-`@nebula-ops/otel` package. It owns the `NebulaOtelConfig` shape and its resolution
+`@nebula-ops/otel` package. It owns the `OtelConfig` shape and its resolution
 rules, resource/attribute conventions layered on top of OpenTelemetry semantic
 conventions, config validation, and log-context correlation primitives built on the
 standard OTel `context` API. It contains no Node-only or browser-only code — it
@@ -16,7 +16,7 @@ value gathering that plug into it. Every other package in the monorepo depends o
 
 ```ts
 // ---- Config ----
-export interface NebulaOtelConfig {
+export interface OtelConfig {
   serviceName: string;
   serviceVersion?: string;
   environment?: string;
@@ -32,24 +32,22 @@ export interface ConfigSource {
   [key: string]: unknown;
 }
 
-export function resolveConfig(
-  overrides?: Partial<NebulaOtelConfig>,
-  source?: ConfigSource,
-): NebulaOtelConfig;
+export function resolveConfig(overrides?: Partial<OtelConfig>, source?: ConfigSource): OtelConfig;
 
-export function validateConfig(config: unknown): NebulaOtelConfig; // throws NebulaConfigError
-export class NebulaConfigError extends Error {
+export function validateConfig(config: unknown): OtelConfig; // throws ConfigError
+export class ConfigError extends Error {
   readonly issues: Array<{ path: string; message: string }>;
 }
 
 // ---- Resource / attributes ----
-export function buildResource(config: NebulaOtelConfig): Resource; // @opentelemetry/resources Resource
+export function buildResource(config: OtelConfig): Resource; // @opentelemetry/resources Resource
 
-export const NebulaAttributes: {
+export const OtelAttributes: {
   readonly SERVICE_NAME: 'service.name';
   readonly SERVICE_VERSION: 'service.version';
   readonly DEPLOYMENT_ENVIRONMENT: 'deployment.environment';
-  readonly NEBULA_PACKAGE_VERSION: 'nebula.otel.package_version';
+  readonly TELEMETRY_DISTRO_NAME: 'telemetry.distro.name';
+  readonly TELEMETRY_DISTRO_VERSION: 'telemetry.distro.version';
 };
 
 // ---- Log-context correlation ----
@@ -76,16 +74,16 @@ export const OTEL_CORE_VERSION: string;
 
 ## Internal modules
 
-| Module                                | Responsibility                                                                                                                                                                                                                     |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/config/resolve.ts`               | Merge precedence: explicit overrides > `ConfigSource` values > defaults. Pure function, no I/O.                                                                                                                                    |
-| `src/config/schema.ts`                | Runtime validation schema (e.g. zod) backing `validateConfig`; single source of truth for required/optional fields and types.                                                                                                      |
-| `src/config/errors.ts`                | `NebulaConfigError` and issue formatting.                                                                                                                                                                                          |
-| `src/resource/build-resource.ts`      | Maps `NebulaOtelConfig` → `@opentelemetry/resources` `Resource`, merging `resourceAttributes` with `NebulaAttributes`-derived values.                                                                                              |
-| `src/attributes/nebula-attributes.ts` | Constants layered on `@opentelemetry/semantic-conventions`.                                                                                                                                                                        |
-| `src/context/log-context.ts`          | `LogContext` type, `getActiveLogContext`/`runWithLogContext`/`bindLogContext`, implemented purely against `@opentelemetry/api`'s `context`/`trace` APIs (no `ContextManager` installation — that's the environment package's job). |
-| `src/context/from-span.ts`            | `logContextFromActiveSpan` — reads `trace.getSpan(context.active())` and formats ids/flags.                                                                                                                                        |
-| `src/index.ts`                        | Public export barrel — the frozen surface above, nothing else.                                                                                                                                                                     |
+| Module                              | Responsibility                                                                                                                                                                                                                     |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/config/resolve.ts`             | Merge precedence: explicit overrides > `ConfigSource` values > defaults. Pure function, no I/O.                                                                                                                                    |
+| `src/config/schema.ts`              | Runtime validation schema (e.g. zod) backing `validateConfig`; single source of truth for required/optional fields and types.                                                                                                      |
+| `src/config/errors.ts`              | `ConfigError` and issue formatting.                                                                                                                                                                                                |
+| `src/resource/build-resource.ts`    | Maps `OtelConfig` → `@opentelemetry/resources` `Resource`, merging `resourceAttributes` with `OtelAttributes`-derived values.                                                                                                      |
+| `src/attributes/otel-attributes.ts` | Constants layered on `@opentelemetry/semantic-conventions`.                                                                                                                                                                        |
+| `src/context/log-context.ts`        | `LogContext` type, `getActiveLogContext`/`runWithLogContext`/`bindLogContext`, implemented purely against `@opentelemetry/api`'s `context`/`trace` APIs (no `ContextManager` installation — that's the environment package's job). |
+| `src/context/from-span.ts`          | `logContextFromActiveSpan` — reads `trace.getSpan(context.active())` and formats ids/flags.                                                                                                                                        |
+| `src/index.ts`                      | Public export barrel — the frozen surface above, nothing else.                                                                                                                                                                     |
 
 ## External dependencies
 

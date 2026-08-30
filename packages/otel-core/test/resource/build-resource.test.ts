@@ -1,31 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import { buildResource } from '../../src/resource/build-resource.js';
-import { NebulaAttributes } from '../../src/attributes/nebula-attributes.js';
+import { OtelAttributes } from '../../src/attributes/otel-attributes.js';
 import { OTEL_CORE_VERSION } from '../../src/version.js';
-import type { NebulaOtelConfig } from '../../src/config/schema.js';
+import type { OtelConfig } from '../../src/config/schema.js';
 
 describe('buildResource', () => {
-  it('sets service.name and the nebula package-version attribute from a minimal config', () => {
+  it('sets service.name and the telemetry.distro.* attributes from a minimal config', () => {
     const resource = buildResource({ serviceName: 'checkout-service' });
-    expect(resource.attributes[NebulaAttributes.SERVICE_NAME]).toBe('checkout-service');
-    expect(resource.attributes[NebulaAttributes.NEBULA_PACKAGE_VERSION]).toBe(OTEL_CORE_VERSION);
+    expect(resource.attributes[OtelAttributes.SERVICE_NAME]).toBe('checkout-service');
+    expect(resource.attributes[OtelAttributes.TELEMETRY_DISTRO_NAME]).toBe('@nebula-ops/otel-core');
+    expect(resource.attributes[OtelAttributes.TELEMETRY_DISTRO_VERSION]).toBe(OTEL_CORE_VERSION);
   });
 
   it('omits service.version and deployment.environment when not provided', () => {
     const resource = buildResource({ serviceName: 'svc' });
-    expect(resource.attributes[NebulaAttributes.SERVICE_VERSION]).toBeUndefined();
-    expect(resource.attributes[NebulaAttributes.DEPLOYMENT_ENVIRONMENT]).toBeUndefined();
+    expect(resource.attributes[OtelAttributes.SERVICE_VERSION]).toBeUndefined();
+    expect(resource.attributes[OtelAttributes.DEPLOYMENT_ENVIRONMENT]).toBeUndefined();
   });
 
   it('includes service.version and deployment.environment when provided', () => {
-    const config: NebulaOtelConfig = {
+    const config: OtelConfig = {
       serviceName: 'svc',
       serviceVersion: '1.2.3',
       environment: 'production',
     };
     const resource = buildResource(config);
-    expect(resource.attributes[NebulaAttributes.SERVICE_VERSION]).toBe('1.2.3');
-    expect(resource.attributes[NebulaAttributes.DEPLOYMENT_ENVIRONMENT]).toBe('production');
+    expect(resource.attributes[OtelAttributes.SERVICE_VERSION]).toBe('1.2.3');
+    expect(resource.attributes[OtelAttributes.DEPLOYMENT_ENVIRONMENT]).toBe('production');
   });
 
   it('merges in explicit resourceAttributes', () => {
@@ -41,8 +42,8 @@ describe('buildResource', () => {
   it('lets explicit resourceAttributes override a derived attribute', () => {
     const resource = buildResource({
       serviceName: 'svc',
-      resourceAttributes: { [NebulaAttributes.SERVICE_NAME]: 'overridden-name' },
+      resourceAttributes: { [OtelAttributes.SERVICE_NAME]: 'overridden-name' },
     });
-    expect(resource.attributes[NebulaAttributes.SERVICE_NAME]).toBe('overridden-name');
+    expect(resource.attributes[OtelAttributes.SERVICE_NAME]).toBe('overridden-name');
   });
 });

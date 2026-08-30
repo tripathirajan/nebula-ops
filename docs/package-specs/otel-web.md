@@ -13,14 +13,14 @@ browser-side OpenTelemetry SDK packages — never on `otel-node`.
 ## Public exports
 
 ```ts
-export interface NebulaWebTracerOptions extends Partial<NebulaOtelConfig> {
+export interface WebTracerOptions extends Partial<OtelConfig> {
   instrumentations?: Instrumentation[]; // default: fetch + XHR + document-load
   exporter?: SpanExporter; // default: OTLPTraceExporter (HTTP) from config.endpoint
   propagateTraceHeaderCorsUrls?: (string | RegExp)[]; // which origins get trace headers
   contextManager?: ContextManager; // default: StackContextManager (pass ZoneContextManager explicitly to opt in — see ADR 0002 #1)
 }
 
-export function initWebTracer(options?: NebulaWebTracerOptions): WebTracerProvider;
+export function initWebTracer(options?: WebTracerOptions): WebTracerProvider;
 export function shutdownWebTracer(provider: WebTracerProvider): Promise<void>;
 
 // ---- web-vitals bridge ----
@@ -81,7 +81,7 @@ export const OTEL_WEB_VERSION: string;
 - Does not implement Node-side instrumentation, NodeSDK setup, or pino/winston
   bindings — that's `otel-node`. `otel-web` never imports `otel-node` or Node
   builtins.
-- Does not define the `NebulaOtelConfig` shape or config validation — consumes
+- Does not define the `OtelConfig` shape or config validation — consumes
   `otel-core`'s.
 - Does not read `process.env` — build-time config injection is the consuming app's
   bundler's responsibility; `otel-web` only documents the expected shape.

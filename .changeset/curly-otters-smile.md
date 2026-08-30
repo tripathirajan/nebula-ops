@@ -5,7 +5,7 @@
 Initial implementation of `@nebula-ops/otel-core`: environment-agnostic config
 resolution (`resolveConfig`/`validateConfig`) with layered precedence
 (explicit overrides > env-derived source > defaults), resource building
-(`buildResource`) via `NebulaAttributes`' semantic-convention-backed keys, and
+(`buildResource`) via `OtelAttributes`' semantic-convention-backed keys, and
 log-context correlation primitives (`getActiveLogContext`/`runWithLogContext`/
 `bindLogContext`/`logContextFromActiveSpan`) built purely on the standard OTel
 `context`/`trace` API.

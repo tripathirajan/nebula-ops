@@ -116,7 +116,7 @@ These are read automatically by `BatchSpanProcessor` if constructed without expl
 options for those fields — explicit constructor options (above) take precedence over
 env vars, which take precedence over the SDK's own hardcoded defaults, matching the
 general OTel config-precedence pattern used throughout this repo's own
-`NebulaOtelConfig` resolution (§ config shape in [`../architecture.md`](../architecture.md)).
+`OtelConfig` resolution (§ config shape in [`../architecture.md`](../architecture.md)).
 
 ## 5.3 Backpressure and data loss
 

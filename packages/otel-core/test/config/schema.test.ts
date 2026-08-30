@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateConfig, DEFAULT_SAMPLING_RATIO } from '../../src/config/schema.js';
-import { NebulaConfigError } from '../../src/config/errors.js';
+import { ConfigError } from '../../src/config/errors.js';
 
 describe('validateConfig', () => {
   it('accepts a minimal config with only serviceName', () => {
@@ -32,54 +32,54 @@ describe('validateConfig', () => {
     expect(config.sampling).toEqual({});
   });
 
-  it('throws NebulaConfigError when serviceName is missing', () => {
-    expect(() => validateConfig({})).toThrow(NebulaConfigError);
+  it('throws ConfigError when serviceName is missing', () => {
+    expect(() => validateConfig({})).toThrow(ConfigError);
   });
 
-  it('throws NebulaConfigError when serviceName is an empty string', () => {
-    expect(() => validateConfig({ serviceName: '' })).toThrow(NebulaConfigError);
+  it('throws ConfigError when serviceName is an empty string', () => {
+    expect(() => validateConfig({ serviceName: '' })).toThrow(ConfigError);
   });
 
-  it('throws NebulaConfigError when serviceName is the wrong type', () => {
-    expect(() => validateConfig({ serviceName: 42 })).toThrow(NebulaConfigError);
+  it('throws ConfigError when serviceName is the wrong type', () => {
+    expect(() => validateConfig({ serviceName: 42 })).toThrow(ConfigError);
   });
 
-  it('throws NebulaConfigError when sampling.ratio is above 1', () => {
+  it('throws ConfigError when sampling.ratio is above 1', () => {
     try {
       validateConfig({ serviceName: 'svc', sampling: { ratio: 1.5 } });
       expect.unreachable('expected validateConfig to throw');
     } catch (err) {
-      expect(err).toBeInstanceOf(NebulaConfigError);
-      expect((err as InstanceType<typeof NebulaConfigError>).issues).toEqual([
+      expect(err).toBeInstanceOf(ConfigError);
+      expect((err as InstanceType<typeof ConfigError>).issues).toEqual([
         { path: 'sampling.ratio', message: 'sampling.ratio must be between 0 and 1' },
       ]);
     }
   });
 
-  it('throws NebulaConfigError when sampling.ratio is below 0', () => {
+  it('throws ConfigError when sampling.ratio is below 0', () => {
     expect(() => validateConfig({ serviceName: 'svc', sampling: { ratio: -0.1 } })).toThrow(
-      NebulaConfigError,
+      ConfigError,
     );
   });
 
-  it('throws NebulaConfigError with one issue per invalid field, not just the first', () => {
+  it('throws ConfigError with one issue per invalid field, not just the first', () => {
     try {
       validateConfig({ serviceName: '', sampling: { ratio: 2 } });
       expect.unreachable('expected validateConfig to throw');
     } catch (err) {
-      const issues = (err as InstanceType<typeof NebulaConfigError>).issues;
+      const issues = (err as InstanceType<typeof ConfigError>).issues;
       expect(issues.length).toBeGreaterThanOrEqual(2);
       expect(issues.some((i) => i.path === 'serviceName')).toBe(true);
       expect(issues.some((i) => i.path === 'sampling.ratio')).toBe(true);
     }
   });
 
-  it('throws NebulaConfigError for a non-object input', () => {
-    expect(() => validateConfig('not a config')).toThrow(NebulaConfigError);
+  it('throws ConfigError for a non-object input', () => {
+    expect(() => validateConfig('not a config')).toThrow(ConfigError);
   });
 
-  it('throws NebulaConfigError for null input', () => {
-    expect(() => validateConfig(null)).toThrow(NebulaConfigError);
+  it('throws ConfigError for null input', () => {
+    expect(() => validateConfig(null)).toThrow(ConfigError);
   });
 
   it('rejects resourceAttributes values of an unsupported type', () => {
@@ -88,7 +88,7 @@ describe('validateConfig', () => {
         serviceName: 'svc',
         resourceAttributes: { bad: { nested: true } },
       }),
-    ).toThrow(NebulaConfigError);
+    ).toThrow(ConfigError);
   });
 
   it('DEFAULT_SAMPLING_RATIO is 1.0 per ADR 0002 #2', () => {

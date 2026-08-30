@@ -1,5 +1,5 @@
-/** One field-level validation failure, in `NebulaConfigError.issues`. */
-export interface NebulaConfigIssue {
+/** One field-level validation failure, in `ConfigError.issues`. */
+export interface ConfigIssue {
   /** Dot-path to the offending field, e.g. `"sampling.ratio"`. `""` for a
    * top-level/whole-value failure. */
   readonly path: string;
@@ -8,24 +8,24 @@ export interface NebulaConfigIssue {
 
 /**
  * Thrown by {@link validateConfig} (and internally by {@link resolveConfig}) when a
- * `NebulaOtelConfig` fails validation. Carries every failing field at once (via
+ * `OtelConfig` fails validation. Carries every failing field at once (via
  * `issues`), not just the first, so a caller can report everything wrong in one pass
  * rather than fixing one field, re-running, and discovering the next.
  */
-export class NebulaConfigError extends Error {
-  readonly issues: readonly NebulaConfigIssue[];
+export class ConfigError extends Error {
+  readonly issues: readonly ConfigIssue[];
 
-  constructor(issues: readonly NebulaConfigIssue[]) {
-    super(NebulaConfigError.formatMessage(issues));
-    this.name = 'NebulaConfigError';
+  constructor(issues: readonly ConfigIssue[]) {
+    super(ConfigError.formatMessage(issues));
+    this.name = 'ConfigError';
     this.issues = issues;
-    // Restores the prototype chain — without this, `instanceof NebulaConfigError`
+    // Restores the prototype chain — without this, `instanceof ConfigError`
     // can return false when the class is extended/compiled down (a well-known TS
     // gotcha when targeting ES2022+ and extending a built-in like Error).
-    Object.setPrototypeOf(this, NebulaConfigError.prototype);
+    Object.setPrototypeOf(this, ConfigError.prototype);
   }
 
-  private static formatMessage(issues: readonly NebulaConfigIssue[]): string {
+  private static formatMessage(issues: readonly ConfigIssue[]): string {
     const lines = issues.map((issue) =>
       issue.path ? `  - ${issue.path}: ${issue.message}` : `  - ${issue.message}`,
     );
